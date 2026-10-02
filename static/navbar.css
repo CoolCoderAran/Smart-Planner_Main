@@ -1,0 +1,298 @@
+/* ==========================================================================
+   STANDARDIZED NAVBAR THEME (MAPPED TO HUB.CSS CORE)
+   ========================================================================== */
+:root {
+    /* Main Navbar Theme */
+    --nav-bg: var(--header-bg);
+    --nav-border: var(--card-border);
+    --nav-radius: 14px;
+    
+    /* Typography Colors */
+    --nav-text-muted: var(--text-muted);
+    --nav-text-active: var(--text-main);
+    --nav-hover-bg: var(--card-bg-hover);
+    
+    /* Active Pill Highlight */
+    --nav-pill-active-bg: var(--card-bg-hover);
+    --nav-pill-active-border: var(--card-border-light);
+    
+    /* Account Chip & Dropdown */
+    --nav-chip-bg: var(--card-bg);
+    --nav-chip-border: var(--card-border);
+    --nav-avatar-bg: var(--accent);
+    --nav-dropdown-bg: var(--card-bg);
+    --nav-dropdown-border: var(--card-border-light);
+    --nav-dropdown-hover: var(--card-bg-hover);
+    --nav-logout-hover: var(--priority-high-bg);
+    --nav-logout-text: var(--priority-high-text);
+}
+
+/* Base Wrapper */
+.app-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+    padding: 12px 20px;
+    box-sizing: border-box;
+}
+
+.nav-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    height: 56px;
+    background-color: var(--nav-bg);
+    border: 1px solid var(--nav-border);
+    border-radius: var(--nav-radius);
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* ==========================================================================
+   LEFT SIDE: ACCOUNT CHIP & DROPDOWN
+   ========================================================================== */
+.nav-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.account-chip-wrapper {
+    position: relative;
+}
+
+.account-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--nav-chip-bg);
+    border: 1px solid var(--nav-chip-border);
+    padding: 5px 14px 5px 6px;
+    border-radius: 9999px;
+    cursor: pointer;
+    color: var(--nav-text-active);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.account-chip:hover {
+    background: var(--nav-hover-bg);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.account-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--nav-avatar-bg);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+/* Hover Dropdown */
+.account-dropdown {
+    position: absolute;
+    top: 100%;
+    margin-top: 8px;
+    left: 0;
+    width: 210px;
+    background: var(--nav-dropdown-bg);
+    border: 1px solid var(--nav-dropdown-border);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(6px);
+    transition: all 0.2s ease;
+
+   backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    
+    border: 1px solid var(--nav-dropdown-border);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* Invisible hover bridge to prevent menu closing on move */
+.account-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 0;
+    width: 100%;
+    height: 12px;
+}
+
+.account-chip-wrapper:hover .account-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-user-info {
+    padding: 8px 12px;
+}
+
+.user-title {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--nav-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.user-display {
+    display: block;
+    color: var(--nav-text-active);
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--nav-dropdown-border);
+    margin: 6px 0;
+}
+
+/* Dropdown Navigation Links */
+.account-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: var(--nav-text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.account-dropdown a:hover {
+    background: var(--nav-dropdown-hover);
+    color: var(--nav-text-active);
+}
+
+.account-dropdown svg,
+.account-dropdown i {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Form Logout Button Fix */
+.logout-form {
+    margin: 0;
+    padding: 0;
+}
+
+.dropdown-logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--nav-text-muted);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dropdown-logout-btn:hover {
+    background: var(--nav-logout-hover);
+    color: var(--nav-logout-text);
+}
+
+/* ==========================================================================
+   CENTER: 5 CORE PILLAR LINKS
+   ========================================================================== */
+.nav-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-pill {
+    padding: 8px 18px;
+    border-radius: 10px;
+    color: var(--nav-text-muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.nav-pill:hover {
+    color: var(--nav-text-active);
+    background: var(--nav-hover-bg);
+}
+
+/* Active Page Pill */
+.nav-pill.active {
+    color: var(--nav-text-active);
+    background: var(--nav-pill-active-bg);
+    border-color: var(--nav-pill-active-border);
+}
+
+/* ==========================================================================
+   RIGHT SIDE: LOGO
+   ========================================================================== */
+.nav-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+}
+
+.app-logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.nav-logo-img {
+    height: 32px;
+    width: auto;
+    display: block;
+}
+
+/* Guest Actions Fallback */
+.auth-guest-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.nav-link-btn {
+    color: var(--nav-text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.nav-primary-btn {
+    background: var(--nav-avatar-bg);
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+}

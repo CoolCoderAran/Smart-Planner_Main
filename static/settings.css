@@ -1,0 +1,137 @@
+/* ==========================================================================
+   PAGE-SPECIFIC STYLES
+   Theme variables (--bg-main, --card-bg, --text-title, etc.) now come
+   exclusively from hub.css, the master theme system, which this page loads
+   first (item 23: previously settings.css redefined the same four themes
+   independently, and the two copies had already drifted apart).
+   ========================================================================== */
+
+body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: var(--bg-main);
+    background-attachment: fixed;
+    color: var(--text-body);
+    min-height: 100vh;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.site-header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--card-border);
+    backdrop-filter: var(--backdrop-blur);
+    position: sticky; top: 0; z-index: 100;
+}
+
+.nav-container {
+    max-width: 1200px; margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+
+.brand-logo img { height: 32px; width: auto; }
+.nav-links { display: flex; gap: 24px; }
+.nav-links a { text-decoration: none; color: var(--text-body); font-weight: 600; font-size: 0.9rem; }
+.nav-links a:hover { color: var(--accent-primary); }
+
+.nav-actions { display: flex; align-items: center; gap: 16px; }
+
+/* THEME DROPDOWN */
+.theme-dropdown { position: relative; }
+.theme-btn {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    color: var(--text-title); padding: 6px 14px; border-radius: 99px;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600;
+}
+.theme-menu {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 12px; display: none; flex-direction: column; min-width: 170px; overflow: hidden; z-index: 1000;
+}
+.theme-menu.is-open { display: flex; }
+.theme-menu button {
+    background: transparent; border: none; padding: 10px 14px;
+    text-align: left; font-family: inherit; font-size: 0.85rem; font-weight: 600;
+    color: var(--text-title); cursor: pointer;
+}
+.theme-menu button:hover { background: var(--card-border); }
+
+.user-profile-menu { position: relative; }
+.profile-button {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    padding: 4px 10px 4px 4px; border-radius: 99px; color: var(--text-title);
+}
+.avatar-circle {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-primary); color: white;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+}
+
+/* SETTINGS LAYOUT */
+.settings-container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+.settings-header h1 { font-size: 1.75rem; font-weight: 800; color: var(--text-title); }
+.settings-header p { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; margin-bottom: 32px; }
+
+.settings-layout { display: grid; grid-template-columns: 240px 1fr; gap: 32px; }
+
+/* TABS */
+.settings-tabs { display: flex; flex-direction: column; gap: 6px; }
+.tab-btn {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    background: transparent; border: none; border-radius: 10px;
+    color: var(--text-body); font-family: inherit; font-weight: 600;
+    font-size: 0.9rem; cursor: pointer; text-align: left; transition: all 0.15s ease;
+}
+.tab-btn:hover { background: var(--card-bg-hover); color: var(--text-title); }
+.tab-btn.active { background: var(--card-bg); color: var(--accent-primary); border: 1px solid var(--card-border); box-shadow: var(--card-shadow); }
+
+/* CONTENT PANELS */
+.tab-panel { display: none; flex-direction: column; gap: 20px; }
+.tab-panel.active { display: flex; }
+
+.panel-card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 28px; box-shadow: var(--card-shadow);
+    backdrop-filter: var(--backdrop-blur);
+}
+.panel-card h3 { font-size: 1.1rem; font-weight: 700; color: var(--text-title); margin-bottom: 4px; }
+.panel-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
+
+/* FORMS */
+.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.form-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-title); }
+.form-input {
+    width: 100%; padding: 10px 14px; background: var(--card-bg);
+    border: 1px solid var(--card-border); border-radius: 8px;
+    color: var(--text-title); font-family: inherit; font-size: 0.9rem;
+}
+
+.btn-primary, .btn-secondary, .btn-danger {
+    padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.88rem;
+    cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary { background: var(--accent-primary); color: white; }
+.btn-secondary { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-title); }
+.btn-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); text-decoration: none; }
+
+/* THEME PREVIEW GRID */
+.theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 12px; }
+.theme-card-option {
+    border: 1px solid var(--card-border); border-radius: 12px; padding: 12px;
+    cursor: pointer; text-align: center; transition: all 0.2s ease;
+}
+.theme-card-option:hover { border-color: var(--accent-primary); transform: translateY(-2px); }
+.theme-preview { height: 60px; border-radius: 6px; margin-bottom: 8px; }
+
+.preview-modern { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+.preview-glass { background: linear-gradient(135deg, #0f172a 0%, #311042 100%); }
+.preview-nordic { background: linear-gradient(135deg, #f2f4f1 0%, #d4ddd5 100%); }
+.preview-midnight { background: #000000; border: 1px solid #333; }
+
+.action-row { display: flex; gap: 12px; margin-top: 12px; }
+
+@media (max-width: 768px) {
+    .settings-layout { grid-template-columns: 1fr; }
+    .theme-grid { grid-template-columns: 1fr; }
+}
+
+

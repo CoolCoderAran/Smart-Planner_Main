@@ -1,0 +1,331 @@
+/* ==========================================================================
+   HUB.CSS — MASTER DESIGN SYSTEM CORE
+   Shared across: Study/Focus | Planner | Calendar | Analytics | AI | Dashboard
+   ========================================================================== */
+
+/* 1A. DEFAULT: MODERN LIGHT THEME */
+:root, [data-theme="modern"] {
+    --bg-main: #f8fafc;
+    --bg-gradient: #f8fafc;
+    --header-bg: #ffffff;
+
+    --card-bg: #ffffff;
+    --card-bg-hover: #f1f5f9;
+    --card-border: #e2e8f0;
+    --card-border-light: #cbd5e1;
+    --card-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+    --backdrop-blur: none;
+
+    --glass-bg: var(--card-bg);
+    --glass-bg-hover: var(--card-bg-hover);
+    --glass-border: var(--card-border);
+    --glass-border-light: var(--card-border-light);
+    --glass-shadow: var(--card-shadow);
+
+    --text-main: #0f172a;
+    --text-title: #0f172a;
+    --text-primary: #0f172a;
+    --text-body: #334155;
+    --text-secondary: #475569;
+    --text-sub: #64748b;
+    --text-muted: #64748b;
+
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --accent-primary: #4f46e5;
+    --accent-blue: #4f46e5;
+    --accent-blue-hover: #4338ca;
+    --accent-color: #4f46e5;
+    --accent-glow: rgba(79, 70, 229, 0.12);
+
+    --priority-high: #dc2626;
+    --priority-medium: #d97706;
+    --priority-med: #d97706;
+    --priority-low: #2563eb;
+    
+    --priority-high-bg: #fee2e2; --priority-high-text: #dc2626;
+    --priority-med-bg: #fef3c7;  --priority-med-text: #d97706;
+    --priority-low-bg: #e0e7ff;  --priority-low-text: #2563eb;
+    --completed: rgba(100, 116, 139, 0.15);
+
+    --ai-card-bg: linear-gradient(135deg, rgba(79, 70, 229, 0.04) 0%, rgba(129, 140, 248, 0.08) 100%);
+    --ai-card-border: rgba(79, 70, 229, 0.2);
+    --alert-color: #ef4444;
+    --danger-red: #ef4444;
+}
+
+/* 1B. DARK GLASSMORPHISM */
+[data-theme="glass"] {
+    --bg-main: #0f172a;
+    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+    --header-bg: rgba(15, 23, 42, 0.75);
+
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-bg-hover: rgba(255, 255, 255, 0.09);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --card-border-light: rgba(255, 255, 255, 0.2);
+    --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --backdrop-blur: blur(16px);
+
+    --glass-bg: var(--card-bg);
+    --glass-bg-hover: var(--card-bg-hover);
+    --glass-border: var(--card-border);
+    --glass-border-light: var(--card-border-light);
+    --glass-shadow: var(--card-shadow);
+
+    --text-main: #f8fafc;
+    --text-title: #f8fafc;
+    --text-primary: #f8fafc;
+    --text-body: #cbd5e1;
+    --text-secondary: #cbd5e1;
+    --text-sub: #94a3b8;
+    --text-muted: #94a3b8;
+
+    --accent: #38bdf8;
+    --accent-hover: #0284c7;
+    --accent-primary: #38bdf8;
+    --accent-blue: #38bdf8;
+    --accent-blue-hover: #0284c7;
+    --accent-color: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.25);
+
+    --priority-high: #ff4d6d;
+    --priority-medium: #ffb703;
+    --priority-med: #ffb703;
+    --priority-low: #06d6a0;
+
+    --priority-high-bg: rgba(255, 77, 109, 0.2); --priority-high-text: #ff4d6d;
+    --priority-med-bg: rgba(255, 183, 3, 0.2);   --priority-med-text: #ffb703;
+    --priority-low-bg: rgba(6, 214, 160, 0.2);   --priority-low-text: #06d6a0;
+    --completed: rgba(255, 255, 255, 0.1);
+
+    --ai-card-bg: rgba(192, 132, 252, 0.08);
+    --ai-card-border: rgba(192, 132, 252, 0.25);
+    --alert-color: #ff4d6d;
+    --danger-red: #ff4d6d;
+}
+
+/* 1C. NORDIC FOREST */
+[data-theme="nordic"] {
+    --bg-main: #f2f4f1;
+    --bg-gradient: #f2f4f1;
+    --header-bg: #ffffff;
+
+    --card-bg: #ffffff;
+    --card-bg-hover: #e4ebe5;
+    --card-border: #d4ddd5;
+    --card-border-light: #b0c2b3;
+    --card-shadow: 0 4px 12px -2px rgba(31, 48, 43, 0.05);
+    --backdrop-blur: none;
+
+    --glass-bg: var(--card-bg);
+    --glass-bg-hover: var(--card-bg-hover);
+    --glass-border: var(--card-border);
+    --glass-border-light: var(--card-border-light);
+    --glass-shadow: var(--card-shadow);
+
+    --text-main: #1f302b;
+    --text-title: #1f302b;
+    --text-primary: #1f302b;
+    --text-body: #3d5249;
+    --text-secondary: #3d5249;
+    --text-sub: #6b8378;
+    --text-muted: #6b8378;
+
+    --accent: #3b7a57;
+    --accent-hover: #2c5c41;
+    --accent-primary: #3b7a57;
+    --accent-blue: #3b7a57;
+    --accent-blue-hover: #2c5c41;
+    --accent-color: #3b7a57;
+    --accent-glow: rgba(59, 122, 87, 0.15);
+
+    --priority-high: #9b2c2c;
+    --priority-medium: #d97706;
+    --priority-med: #d97706;
+    --priority-low: #137333;
+
+    --priority-high-bg: #fde8e8; --priority-high-text: #9b2c2c;
+    --priority-med-bg: #fef3c7;  --priority-med-text: #92400e;
+    --priority-low-bg: #e6f4ea;  --priority-low-text: #137333;
+    --completed: rgba(107, 131, 120, 0.2);
+
+    --ai-card-bg: rgba(59, 122, 87, 0.06);
+    --ai-card-border: rgba(59, 122, 87, 0.2);
+    --alert-color: #9b2c2c;
+    --danger-red: #9b2c2c;
+}
+
+/* 1D. MIDNIGHT CYBER */
+[data-theme="midnight"] {
+    --bg-main: #000000;
+    --bg-gradient: #000000;
+    --header-bg: #09090b;
+
+    --card-bg: #0d0d0d;
+    --card-bg-hover: #171717;
+    --card-border: #222222;
+    --card-border-light: #333333;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    --backdrop-blur: none;
+
+    --glass-bg: var(--card-bg);
+    --glass-bg-hover: var(--card-bg-hover);
+    --glass-border: var(--card-border);
+    --glass-border-light: var(--card-border-light);
+    --glass-shadow: var(--card-shadow);
+
+    --text-main: #ffffff;
+    --text-title: #ffffff;
+    --text-primary: #ffffff;
+    --text-body: #a1a1aa;
+    --text-secondary: #a1a1aa;
+    --text-sub: #71717a;
+    --text-muted: #71717a;
+
+    --accent: #06b6d4;
+    --accent-hover: #0891b2;
+    --accent-primary: #06b6d4;
+    --accent-blue: #06b6d4;
+    --accent-blue-hover: #0891b2;
+    --accent-color: #06b6d4;
+    --accent-glow: rgba(6, 182, 212, 0.25);
+
+    --priority-high: #f87171;
+    --priority-medium: #fbbf24;
+    --priority-med: #fbbf24;
+    --priority-low: #34d399;
+
+    --priority-high-bg: rgba(239, 68, 68, 0.2);  --priority-high-text: #f87171;
+    --priority-med-bg: rgba(245, 158, 11, 0.2);  --priority-med-text: #fbbf24;
+    --priority-low-bg: rgba(16, 185, 129, 0.2);  --priority-low-text: #34d399;
+    --completed: rgba(255, 255, 255, 0.1);
+
+    --ai-card-bg: rgba(6, 182, 212, 0.08);
+    --ai-card-border: rgba(6, 182, 212, 0.25);
+    --alert-color: #ef4444;
+    --danger-red: #ef4444;
+}
+
+/* ==========================================================================
+   GLOBAL RESETS & BASE LAYOUT
+   ========================================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-body);
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 40px;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ==========================================================================
+   UI COMPONENTS & GLASS PRIMITIVES
+   ========================================================================== */
+.glass-card, .app-card, .dash-card {
+    background: var(--card-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--card-shadow);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.glass-input, .form-input, .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--card-bg-hover);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    color: var(--text-main);
+    outline: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.glass-input:focus, .form-input:focus, .form-group input:focus, .form-group select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.glass-btn, .btn, .nav-btn, .today-btn, .view-btn, .btn-submit, .btn-cancel {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-main);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: var(--backdrop-blur);
+    transition: all 0.2s ease;
+}
+
+.glass-btn:hover, .btn:hover, .nav-btn:hover, .today-btn:hover, .view-btn:hover {
+    background: var(--card-bg-hover);
+    border-color: var(--card-border-light);
+    transform: translateY(-1px);
+}
+
+.glass-btn.primary, .btn-primary, .btn-submit {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+.glass-btn.primary:hover, .btn-primary:hover, .btn-submit:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.glass-btn.danger, .btn-danger {
+    background: var(--priority-high-bg);
+    border-color: var(--priority-high);
+    color: var(--priority-high-text);
+}
+
+.glass-btn.danger:hover, .btn-danger:hover {
+    background: var(--priority-high);
+    color: #ffffff;
+}
+
+/* Modal Windows */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border: 1px solid var(--card-border-light);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: var(--card-shadow);
+    position: relative;
+    color: var(--text-main);
+}
+
+

@@ -1,0 +1,19 @@
+@import url("/static/landing.css");
+
+body {
+    margin: 0;
+}
+
+.account-dropdown form {
+    margin: 0;
+}
+
+.account-dropdown button {
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-align: left;
+}
