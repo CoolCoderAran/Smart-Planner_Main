@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar • Smart Planner</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
+
+    <!-- FullCalendar CDN (includes core + dayGrid/timeGrid/list/interaction plugins) -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<script>
+    (function() {
+        const savedTheme = localStorage.getItem('appTheme') || 'modern';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+</script>
+
+<body class="calendar-body">
+
+    {% include 'navbar.html' %}
+
+    <main class="calendar-container">
+
+        <!-- SIDEBAR: PLANNER TASK UNASSIGNED QUEUE -->
+        <aside class="glass-card calendar-sidebar">
+            <div class="sidebar-header">
+                <h3><i data-lucide="list-todo"></i> Task Queue</h3>
+                <p>Drag a task onto the calendar to schedule study time for it</p>
+            </div>
+
+            <div id="external-events" class="external-events-list">
+                {% for task in tasks %}
+                <div class="fc-event glass-draggable-task"
+                     data-id="{{ task.id }}"
+                     data-title="{{ task.title }}"
+                     data-duration="{{ task.estimated_minutes or 30 }}"
+                     data-subject="{{ task.subject or 'General' }}">
+                    <div class="drag-title">{{ task.title }}</div>
+                    <div class="drag-meta">
+                        <span class="subject-tag">{{ task.subject or 'General' }}</span>
+                        <span class="duration-tag">{{ task.estimated_minutes or 30 }}m</span>
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="empty-queue-msg" id="emptyQueueMsg" {% if tasks %}style="display:none;"{% endif %}>
+                    <p>No unscheduled tasks. Nice work!</p>
+                    <a href="/planner" class="glass-btn sm">Add Tasks</a>
+                </div>
+            </div>
+
+            <!-- GOOGLE CALENDAR SYNC CARD -->
+            <div class="gcal-sync-card">
+                <h4><i data-lucide="refresh-cw"></i> Google Calendar</h4>
+                <p id="gcalStatusText">Checking connection…</p>
+                <button class="glass-btn full-width" id="gcalActionBtn" onclick="handleGcalAction()">
+                    …
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN FULLCALENDAR DISPLAY CARD -->
+        <section class="glass-card calendar-card">
+            <div id="calendar"></div>
+        </section>
+
+    </main>
+
+    <!-- EVENT CREATION / EDIT MODAL -->
+    <div id="eventModal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Schedule Event</h3>
+                <button class="close-btn" onclick="closeEventModal()">&times;</button>
+            </div>
+            <form id="eventForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="eventId" name="event_id">
+
+                <div class="input-group">
+                    <label for="eventTitleInput">Title</label>
+                    <input type="text" id="eventTitleInput" name="title" class="glass-input" required maxlength="255">
+                </div>
+
+                <div class="input-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="eventAllDayInput" name="is_all_day">
+                        All-day event
+                    </label>
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="eventStartInput">Start</label>
+                        <input type="datetime-local" id="eventStartInput" name="start_time" class="glass-input" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="eventEndInput">End</label>
+                        <input type="datetime-local" id="eventEndInput" name="end_time" class="glass-input" required>
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="eventCategoryInput">Category</label>
+                        <input type="text" id="eventCategoryInput" name="category" class="glass-input" maxlength="100" placeholder="General">
+                    </div>
+                    <div class="input-group">
+                        <label for="eventLocationInput">Location</label>
+                        <input type="text" id="eventLocationInput" name="location" class="glass-input" maxlength="255" placeholder="Optional">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="eventDescriptionInput">Description</label>
+                    <textarea id="eventDescriptionInput" name="description" class="glass-input" rows="3" maxlength="2000" placeholder="Optional notes"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="glass-btn danger" id="deleteEventBtn" style="display:none;" onclick="deleteCurrentEvent()">Delete</button>
+                    <button type="button" class="glass-btn" onclick="closeEventModal()">Cancel</button>
+                    <button type="submit" class="glass-btn primary">Save Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='calendar.js') }}"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

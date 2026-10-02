@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terra AI • Smart Planner</title>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='ai.css') }}">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<script>
+    (function() {
+        const savedTheme = localStorage.getItem('appTheme') || 'modern';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+</script>
+
+<body class="ai-body">
+
+    <!-- NAVBAR -->
+    {% include 'navbar.html' %}
+
+    <main class="ai-layout">
+        
+        <!-- LEFT: CHAT INTERFACE CONTAINER -->
+        <section class="glass-card chat-card">
+            
+            <!-- CHAT HEADER -->
+            <header class="chat-header">
+                <div class="terra-identity">
+                    <div class="terra-avatar">
+                        <i data-lucide="sparkles"></i>
+                    </div>
+                    <div>
+                        <h2>Terra AI Engine</h2>
+                        <span class="terra-status"><span class="status-dot"></span> Ready to assist</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="glass-icon-btn" onclick="clearChatHistory()" title="Clear Chat">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- MESSAGES CONTAINER -->
+            <div class="chat-messages" id="chatMessages">
+                
+                <!-- WELCOME MESSAGE FROM TERRA -->
+                <div class="message terra-message">
+                    <div class="msg-avatar"><i data-lucide="sparkles"></i></div>
+                    <div class="msg-bubble">
+                        <p>Hello, {{ session.get('username', 'there') }}! I'm <strong>Terra</strong>, your AI scheduling assistant.</p>
+                        <p>I can help you build study schedules, break complex assignments into manageable subtasks, organize your calendar, or optimize your daily workload. What are we planning today?</p>
+                        
+                        <div class="suggestion-chips">
+                            <button class="chip" onclick="usePrompt('Help me plan my study schedule for final exams next week.')">
+                                📚 Plan exam schedule
+                            </button>
+                            <button class="chip" onclick="usePrompt('Break down my term paper into subtasks with deadlines.')">
+                                📝 Break down assignment
+                            </button>
+                            <button class="chip" onclick="usePrompt('Organize my tasks for today by priority.')">
+                                ⚡ Optimize today's schedule
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CHAT INPUT AREA -->
+            <footer class="chat-input-area">
+                <form id="aiForm" onsubmit="handleChatSubmit(event)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="userInput" 
+                            class="glass-textarea" 
+                            placeholder="Ask Terra to schedule, organize, or break down tasks..." 
+                            rows="1" 
+                            required
+                            onkeydown="handleKeyDown(event)"></textarea>
+                        
+                        <button type="submit" id="sendBtn" class="send-btn">
+                            <i data-lucide="send"></i>
+                        </button>
+                    </div>
+                </form>
+            </footer>
+
+        </section>
+
+        <!-- RIGHT: PROPOSAL / ACTION PREVIEW PANEL -->
+        <aside class="glass-card proposal-card" id="proposalCard">
+            <div class="proposal-header">
+                <i data-lucide="calendar-check"></i>
+                <h3>Proposed Actions</h3>
+            </div>
+
+            <p class="proposal-intro" id="proposalIntro">
+                When Terra suggests schedule changes or new tasks, structured proposals will appear here for your review and one-click application.
+            </p>
+
+            <!-- DYNAMIC PROPOSALS CONTAINER -->
+            <div id="proposalContainer" class="proposal-list">
+                <div class="empty-proposal-state">
+                    <i data-lucide="bot"></i>
+                    <p>No active proposals. Chat with Terra to generate automated task structures or calendar events.</p>
+                </div>
+            </div>
+
+            <!-- BATCH APPLY BUTTON -->
+            <div class="proposal-actions" id="proposalActions" style="display: none;">
+                <button class="glass-btn primary full-width" onclick="applyAllProposals()">
+                    <i data-lucide="check-circle-2"></i> Apply Proposals to Planner
+                </button>
+            </div>
+        </aside>
+
+    </main>
+
+    <script src="{{ url_for('static', filename='ai.js') }}"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+
+

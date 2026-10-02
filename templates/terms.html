@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service — Smart Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Base Page Setup */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1f2937;
+        }
+
+        /* NAVIGATION BAR STYLES */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 12px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .logo img {
+            height: 36px;
+            width: auto;
+            display: block;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #475569;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #2563eb;
+        }
+
+        /* Account Dropdown Styles */
+        .account-menu {
+            position: relative;
+        }
+
+        .account-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #334155;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .account-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .account-avatar {
+            width: 24px;
+            height: 24px;
+            background: #2563eb;
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .account-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 160px;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* Show dropdown on hover or focus */
+        .account-menu:hover .account-dropdown,
+        .account-menu:focus-within .account-dropdown {
+            display: block;
+        }
+
+        .account-dropdown a {
+            display: block;
+            padding: 10px 16px;
+            color: #334155;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+
+        .account-dropdown a:hover {
+            background: #f8fafc;
+            color: #2563eb;
+        }
+
+        /* Auth Buttons */
+        .nav-login {
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-login:hover {
+            color: #2563eb;
+        }
+
+        .nav-signup, .terms-back-btn {
+            background-color: #2563eb;
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .nav-signup:hover, .terms-back-btn:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* LEGAL CONTENT LAYOUT */
+        .legal-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 40px;
+            line-height: 1.6;
+        }
+
+        .legal-sidebar {
+            position: sticky;
+            top: 80px;
+            height: fit-content;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .legal-sidebar h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .legal-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .legal-sidebar li {
+            margin-bottom: 8px;
+        }
+
+        .legal-sidebar a {
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .legal-sidebar a:hover {
+            color: #2563eb;
+        }
+
+        .legal-content {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .legal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 24px;
+            margin-bottom: 32px;
+        }
+
+        .legal-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border-radius: 9999px;
+            margin-bottom: 12px;
+        }
+
+        .summary-box {
+            background: #f8fafc;
+            border-left: 4px solid #2563eb;
+            padding: 16px 20px;
+            margin: 20px 0 28px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .legal-content h2 {
+            font-size: 1.35rem;
+            color: #0f172a;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .legal-content h2:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .legal-content h3 {
+            font-size: 1.05rem;
+            color: #1e293b;
+            margin-top: 20px;
+        }
+
+        .legal-content p, .legal-content li {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+
+        .legal-content ul {
+            padding-left: 20px;
+        }
+
+        .legal-actions {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        @media (max-width: 850px) {
+            .navbar {
+                padding: 12px 16px;
+            }
+            .nav-links {
+                display: none;
+            }
+            .legal-container {
+                grid-template-columns: 1fr;
+            }
+            .legal-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- NAVIGATION BAR -->
+<nav class="navbar">
+
+    <!-- LEFT SIDE -->
+    <div class="nav-left">
+        <a href="/" class="logo">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="Smart Planner Logo">
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/">Features</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="nav-right">
+        {% if session.get("username") or session.get("user_id") %}
+        <div class="account-menu">
+            <button class="account-btn" type="button" aria-haspopup="true">
+                <span class="account-avatar">
+                    {{ (session.get("username") or "U")[0].upper() }}
+                </span>
+                <span class="account-name">
+                    {{ session.get("username", "User") }}
+                </span>
+                &#9662;
+            </button>
+
+            <div class="account-dropdown">
+                <a href="/planner">Dashboard</a>
+                <form action="/logout" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit">Logout</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <a href="/login" class="nav-login">Login</a>
+        <a href="/signup" class="nav-signup">Get Started</a>
+        {% endif %}
+    </div>
+
+</nav>
+
+<!-- MAIN LEGAL CONTENT -->
+<div class="legal-container">
+
+    <!-- Sticky Navigation Sidebar -->
+    <aside class="legal-sidebar">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="#overview">1. Service Overview</a></li>
+            <li><a href="#eligibility">2. Eligibility &amp; Accounts</a></li>
+            <li><a href="#acceptable-use">3. Acceptable Use</a></li>
+            <li><a href="#ai-terms">4. AI &amp; Terra Engine</a></li>
+            <li><a href="#user-content">5. User Data Rights</a></li>
+            <li><a href="#platform-ip">6. Platform IP</a></li>
+            <li><a href="#dmca">7. Copyright &amp; DMCA</a></li>
+            <li><a href="#availability">8. Service Availability</a></li>
+            <li><a href="#termination">9. Account Termination</a></li>
+            <li><a href="#disclaimers">10. Disclaimers</a></li>
+            <li><a href="#liability">11. Limitation of Liability</a></li>
+            <li><a href="#indemnification">12. Indemnification</a></li>
+            <li><a href="#disputes">13. Governing Law</a></li>
+            <li><a href="#contact">14. Contact Support</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="legal-content">
+
+        <div class="legal-header">
+            <span class="legal-badge">Legal Documentation</span>
+            <h1>Terms of Service</h1>
+            <p class="terms-effective"><strong>Last Updated:</strong> September 13, 2026 &bull; <strong>Version:</strong> 2.0</p>
+        </div>
+
+        <p class="terms-intro">
+            Welcome to Smart Planner. These Terms of Service ("Terms") constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("you", "user") and Smart Planner ("Smart Planner," "we," "us," or "our"), concerning your access to and use of the Smart Planner web platform, applications, and integrated AI tools (collectively, the "Service").
+        </p>
+
+        <div class="summary-box">
+            <strong>TL;DR / Quick Summary:</strong> Smart Planner is a web-based task management and calendar system with AI assistance. By using our site, you agree to be at least 13 years old, use our tools responsibly, and respect our intellectual property. You own your task data, and while our AI assists you with scheduling, you remain in control of your actual time.
+        </div>
+
+        <!-- Section 1 -->
+        <h2 id="overview">1. Service Overview</h2>
+        <p>Smart Planner provides an all-in-one productivity suite featuring intelligent task scheduling, dynamic calendar synchronization, focus timers, performance analytics, and automated assistance via our proprietary "Terra AI" contextual engine.</p>
+        <p>The Service is hosted entirely as a web application accessible via supported, modern web browsers. We reserve the right to refine, update, or alter functional modules within the platform to maintain system performance and security.</p>
+
+        <!-- Section 2 -->
+        <h2 id="eligibility">2. Eligibility &amp; Account Security</h2>
+        <p>You must be at least 13 years of age to access or create an account on Smart Planner. By accessing the Service, you warrant that you meet this age requirement and hold the legal capacity to enter into these Terms.</p>
+        <h3>Account Responsibilities</h3>
+        <ul>
+            <li><strong>Accuracy:</strong> You agree to provide truthful and updated information during account registration.</li>
+            <li><strong>Security:</strong> You are responsible for safeguarding your login credentials (username, password, and session tokens).</li>
+            <li><strong>Notice:</strong> You must immediately report any known or suspected unauthorized access to your account or data breaches.</li>
+        </ul>
+
+        <!-- Section 3 -->
+        <h2 id="acceptable-use">3. Acceptable Use Policy</h2>
+        <p>To preserve the integrity and security of the platform, all users must abide by our operational guidelines. You agree that you will not:</p>
+        <ul>
+            <li>Reverse engineer, decompile, inspect, or attempt to extract the source code or underlying architecture of the web application;</li>
+            <li>Bypass or attempt to exploit rate limits, security filters, or access control parameters enforced on server endpoints;</li>
+            <li>Introduce malicious code, scripts, automated web scrapers, bots, or unauthorized data harvesting mechanisms;</li>
+            <li>Use the web platform to distribute unsolicited messages, spam, or unlawful material;</li>
+            <li>Impersonate any other user, system administrator, or organization.</li>
+        </ul>
+
+        <!-- Section 4 -->
+        <h2 id="ai-terms">4. AI Features &amp; Terra Engine Disclosures</h2>
+        <p>Smart Planner incorporates automated scheduling algorithms and generative Artificial Intelligence ("AI Features"), including prompt-driven scheduling tools powered by large language models (LLMs).</p>
+        <h3>4.1 Machine Learning Limitations</h3>
+        <p>AI Features are provided strictly for organization and recommendation purposes. Output generated by the AI (such as task breakdowns, duration estimates, or daily schedules) relies on statistical models and may occasionally yield inaccurate or unsuitable recommendations.</p>
+
+        <h3>4.2 User Autonomy</h3>
+        <p>You acknowledge that AI-suggested schedules are suggestions only. Smart Planner holds no responsibility for missed deadlines, inaccurate time allocations, or scheduling conflicts resulting from automated output.</p>
+
+        <!-- Section 5 -->
+        <h2 id="user-content">5. User Data &amp; Content Rights</h2>
+        <p>You retain 100% ownership of all tasks, notes, calendar data, focus metrics, and custom configurations you enter into the platform ("User Content"). Smart Planner claims zero ownership over your personal data.</p>
+        <p>You grant Smart Planner a worldwide, royalty-free, limited license to host, store, query, format, and display your User Content strictly for the operational purpose of rendering the Service to you and generating personalized analytics.</p>
+
+        <!-- Section 6 -->
+        <h2 id="platform-ip">6. Platform Intellectual Property</h2>
+        <p>The visual interfaces, UI elements, branding, design systems, algorithms, database architectures, CSS animations, and source code comprising Smart Planner are the exclusive intellectual property of Smart Planner and its licensors. You may not copy, duplicate, or adapt any portion of our visual design or code without explicit prior written authorization.</p>
+
+        <!-- Section 7 -->
+        <h2 id="dmca">7. Copyright &amp; DMCA Policy</h2>
+        <p>We respect the intellectual property rights of others and comply with the Digital Millennium Copyright Act (17 U.S.C. &sect; 512). If you believe material stored on or transmitted through the Service infringes your copyright, you may submit a formal notification to our Designated Copyright Representative containing:</p>
+        <ul>
+            <li>A physical or digital signature of the copyright holder or authorized representative;</li>
+            <li>Clear identification of the copyrighted work claimed to have been infringed;</li>
+            <li>Detailed identification of the material location on the web application;</li>
+            <li>Your contact details (address, phone number, and official email address);</li>
+            <li>A statement affirming a good-faith belief that the contested use is unauthorized;</li>
+            <li>A formal statement, under penalty of perjury, that the information in the notification is accurate.</li>
+        </ul>
+
+        <!-- Section 8 -->
+        <h2 id="availability">8. Service Availability &amp; Maintenance</h2>
+        <p>While we strive for maximum uptime, Smart Planner is provided without guarantees of uninterrupted availability. The platform may periodically undergo scheduled maintenance, infrastructure upgrades, or emergency security patching, which may result in temporary service interruptions.</p>
+
+        <!-- Section 9 -->
+        <h2 id="termination">9. Account Suspension &amp; Termination</h2>
+        <p>We reserve the right to suspend or terminate your account access immediately, without prior notice, if we determine that you have violated these Terms, compromised platform security, or attempted to misuse our API endpoints.</p>
+        <p>You may request account deletion at any time via your account settings. Upon deletion, your personal task records and account credentials will be permanently purged from active production databases.</p>
+
+        <!-- Section 10 -->
+        <h2 id="disclaimers">10. Disclaimers of Warranties</h2>
+        <p>THE SERVICE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY. SMART PLANNER EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.</p>
+
+        <!-- Section 11 -->
+        <h2 id="liability">11. Limitation of Liability</h2>
+        <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL SMART PLANNER, ITS DIRECTORS, OR SUPPLIERS BE LIABLE FOR ANY INDIRECT, CONSEQUENTIAL, INCIDENTAL, SPECIAL, OR PUNITIVE DAMAGES (INCLUDING LOSS OF DATA, PRODUCTIVITY DISRUPTIONS, OR FINANCIAL LOSSES) ARISING FROM YOUR USE OR INABILITY TO USE THE SERVICE.</p>
+
+        <!-- Section 12 -->
+        <h2 id="indemnification">12. Indemnification</h2>
+        <p>You agree to defend, indemnify, and hold harmless Smart Planner and its developers from and against any claims, liabilities, damages, losses, and expenses (including reasonable legal fees) arising out of or in any way connected to your violation of these Terms or misuse of the Service.</p>
+
+        <!-- Section 13 -->
+        <h2 id="disputes">13. Governing Law &amp; Jurisdiction</h2>
+        <p>These Terms shall be governed by and construed in accordance with the laws of the State of New Jersey, United States, without regard to its conflict of law provisions. Any legal action or proceeding arising under these Terms shall be brought exclusively in the state or federal courts located within NJ.</p>
+
+        <!-- Section 14 -->
+        <h2 id="contact">14. Contact Information</h2>
+        <p>If you have questions, feedback, or legal inquiries regarding these Terms of Service, please reach out to us:</p>
+        <ul>
+            <li><strong>Email:</strong> aran.rath@outlook.com</li>
+            <li><strong>Web Support:</strong> <a href="https://smart_planner_for_school.onrender.com/contact" target="_blank" rel="noopener">smart_planner_for_school.onrender.com/contact</a></li>
+        </ul>
+
+        <div class="legal-actions">
+            <a href="/signup" class="terms-back-btn">Return to Sign Up</a>
+            <a href="/planner" class="terms-back-btn">Return to Dashboard</a>
+        </div>
+
+    </main>
+
+</div>
+
+</body>
+</html>

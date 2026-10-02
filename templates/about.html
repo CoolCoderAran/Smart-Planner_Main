@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us — Smart Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Base Page Setup */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1f2937;
+        }
+
+        /* NAVIGATION BAR STYLES */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 12px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .logo img {
+            height: 36px;
+            width: auto;
+            display: block;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #475569;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #2563eb;
+        }
+
+        /* Account Dropdown Styles */
+        .account-menu {
+            position: relative;
+        }
+
+        .account-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #334155;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .account-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .account-avatar {
+            width: 24px;
+            height: 24px;
+            background: #2563eb;
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .account-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 160px;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* Show dropdown on hover or focus */
+        .account-menu:hover .account-dropdown,
+        .account-menu:focus-within .account-dropdown {
+            display: block;
+        }
+
+        .account-dropdown a {
+            display: block;
+            padding: 10px 16px;
+            color: #334155;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+
+        .account-dropdown a:hover {
+            background: #f8fafc;
+            color: #2563eb;
+        }
+
+        /* Auth Buttons */
+        .nav-login {
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-login:hover {
+            color: #2563eb;
+        }
+
+        .nav-signup, .terms-back-btn {
+            background-color: #2563eb;
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .nav-signup:hover, .terms-back-btn:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* Layout & Component Overrides */
+        .legal-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 40px;
+            line-height: 1.6;
+        }
+
+        .legal-sidebar {
+            position: sticky;
+            top: 80px;
+            height: fit-content;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .legal-sidebar h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .legal-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .legal-sidebar li {
+            margin-bottom: 8px;
+        }
+
+        .legal-sidebar a {
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .legal-sidebar a:hover {
+            color: #2563eb;
+        }
+
+        .legal-content {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .legal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 24px;
+            margin-bottom: 32px;
+        }
+
+        .legal-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border-radius: 9999px;
+            margin-bottom: 12px;
+        }
+
+        .summary-box {
+            background: #f8fafc;
+            border-left: 4px solid #2563eb;
+            padding: 16px 20px;
+            margin: 20px 0 28px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .legal-content h2 {
+            font-size: 1.35rem;
+            color: #0f172a;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .legal-content h2:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .legal-content h3 {
+            font-size: 1.05rem;
+            color: #1e293b;
+            margin-top: 20px;
+        }
+
+        .legal-content p, .legal-content li {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+
+        .legal-content ul {
+            padding-left: 20px;
+        }
+
+        .legal-actions {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        @media (max-width: 850px) {
+            .navbar {
+                padding: 12px 16px;
+            }
+            .nav-links {
+                display: none;
+            }
+            .legal-container {
+                grid-template-columns: 1fr;
+            }
+            .legal-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- NAVIGATION BAR -->
+<nav class="navbar">
+
+    <!-- LEFT SIDE -->
+    <div class="nav-left">
+        <a href="/" class="logo">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="Smart Planner Logo">
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/">Features</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="nav-right">
+        {% if session.get("username") or session.get("user_id") %}
+        <div class="account-menu">
+            <button class="account-btn" type="button" aria-haspopup="true">
+                <span class="account-avatar">
+                    {{ (session.get("username") or "U")[0].upper() }}
+                </span>
+                <span class="account-name">
+                    {{ session.get("username", "User") }}
+                </span>
+                &#9662;
+            </button>
+
+            <div class="account-dropdown">
+                <a href="/planner">Dashboard</a>
+                <form action="/logout" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit">Logout</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <a href="/login" class="nav-login">Login</a>
+        <a href="/signup" class="nav-signup">Get Started</a>
+        {% endif %}
+    </div>
+
+</nav>
+
+<!-- MAIN ABOUT CONTENT -->
+<div class="legal-container">
+
+    <!-- Sticky Navigation Sidebar -->
+    <aside class="legal-sidebar">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="#mission">1. Our Mission</a></li>
+            <li><a href="#why-built">2. Why We Built It</a></li>
+            <li><a href="#terra-ai">3. Intelligent Scheduling</a></li>
+            <li><a href="#privacy-first">4. Privacy & Safety</a></li>
+            <li><a href="#roadmap">5. What's Next</a></li>
+            <li><a href="#contact">6. Get in Touch</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="legal-content">
+
+        <div class="legal-header">
+            <span class="legal-badge">Platform Information</span>
+            <h1>About Smart Planner</h1>
+            <p class="terms-effective"><strong>Platform Status:</strong> Active Development &bull; <strong>Built for Students</strong></p>
+        </div>
+
+        <p class="terms-intro">
+            Smart Planner was created to remove the stress and friction from student organization. By combining intuitive task tracking, dynamic calendar scheduling, and intelligent AI features, we help students stay focused on what matters most.
+        </p>
+
+        <div class="summary-box">
+            <strong>TL;DR / Our Philosophy:</strong> Traditional planners require too much manual effort. Smart Planner automates the clutter so you spend less time organizing work and more time actually doing it.
+        </div>
+
+        <!-- Section 1 -->
+        <h2 id="mission">1. Our Mission</h2>
+        <p>Academic life is filled with competing deadlines, exams, and extracurriculars. Our mission is to provide an all-in-one digital workspace that prioritizes your workload, optimizes your time blocks, and keeps academic burnout at bay.</p>
+
+        <!-- Section 2 -->
+        <h2 id="why-built">2. Why We Built It</h2>
+        <p>Most planning tools fall into two extremes: either they are overly simple to-do lists that fail when your schedule gets complex, or they are complicated enterprise tools that require hours of setup.</p>
+        <p>Smart Planner strikes the perfect balance. It delivers a streamlined, modern interface designed specifically around student workflows—giving you high-powered tools without the setup headache.</p>
+
+        <!-- Section 3 -->
+        <h2 id="terra-ai">3. Powered by Smart AI</h2>
+        <p>At the core of the platform is our integrated AI engine. Instead of manually dragging tasks across a calendar, our smart algorithms evaluate your deadlines, task effort, and available focus windows to recommend optimized daily schedules.</p>
+        <ul>
+            <li><strong>Dynamic Prioritization:</strong> Tasks automatically shift based on urgency.</li>
+            <li><strong>Focus Mode:</strong> Integrated timers built to keep you in the flow state.</li>
+            <li><strong>Intelligent Parsing:</strong> Turn complex project assignments into step-by-step actionable subtasks.</li>
+        </ul>
+
+        <!-- Section 4 -->
+        <h2 id="privacy-first">4. Privacy & Safety First</h2>
+        <p>We respect your privacy. You retain 100% ownership of your tasks, calendars, and personal notes. We do not sell user data, and our integration with advanced AI providers adheres strictly to safety and privacy standards for educational technology.</p>
+        <p>To learn more about how we safeguard your data, visit our <a href="/terms">Terms of Service</a> or Privacy Policy.</p>
+
+        <!-- Section 5 -->
+        <h2 id="roadmap">5. Looking to the Future</h2>
+        <p>Smart Planner is continuously improving. We regularly release update patches, new UI optimizations, and feature enhancements based directly on student feedback. Key updates in active development include advanced analytics, collaborative study groups, and deep mobile integration.</p>
+
+        <!-- Section 6 -->
+        <h2 id="contact">6. Get in Touch</h2>
+        <p>Have questions, ideas for new features, or feedback about the platform? We would love to hear from you.</p>
+        <ul>
+            <li><strong>Developer Email:</strong> aran.rath@outlook.com</li>
+            <li><strong>Support & Feedback:</strong> <a href="/contact">smart_planner_for_school.onrender.com/contact</a></li>
+        </ul>
+
+        <div class="legal-actions">
+            <a href="/signup" class="btn-primary">Get Started Free</a>
+            <a href="/planner" class="btn-secondary">Go to Planner</a>
+        </div>
+
+    </main>
+
+</div>
+
+</body>
+</html>

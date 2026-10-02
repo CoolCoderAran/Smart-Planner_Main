@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — Smart Planner</title>
+
+    <!-- Theme pre-loader -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('appTheme') || 'modern';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
+    <!-- Google Font & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='settings.css') }}?v=1.0">
+</head>
+<body>
+
+    <!-- NAVIGATION HEADER -->
+    <header class="site-header">
+        <div class="nav-container">
+            <a href="/dashboard" class="brand-logo">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="Smart Planner Logo">
+            </a>
+
+            <nav class="nav-links">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/planner">Planner</a>
+                <a href="/calendar">Calendar</a>
+                <a href="/focus">Focus</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/ai">AI Engine</a>
+            </nav>
+
+            <div class="nav-actions">
+                <!-- Theme Selector -->
+                <div class="theme-dropdown">
+                    <button class="theme-btn" id="themeDropdownBtn">
+                        <i data-lucide="palette"></i>
+                        <span id="themeToggleText">Theme</span>
+                        <i data-lucide="chevron-down" class="chevron-icon"></i>
+                    </button>
+                    <div class="theme-menu" id="themeMenu">
+                        <button onclick="setAppTheme('modern')">☀️ Modern Light</button>
+                        <button onclick="setAppTheme('glass')">✨ Glassmorphism</button>
+                        <button onclick="setAppTheme('nordic')">🌿 Nordic Forest</button>
+                        <button onclick="setAppTheme('midnight')">🌙 Midnight Cyber</button>
+                    </div>
+                </div>
+
+                <div class="user-profile-menu">
+                    <button class="profile-button">
+                        <span class="avatar-circle">{{ session.get("username", "U")[0].upper() }}</span>
+                        <span class="username">{{ session.get("username", "User") }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SETTINGS MAIN CONTAINER -->
+    <main class="settings-container">
+        
+        <div class="settings-header">
+            <h1>Account Settings</h1>
+            <p>Customize your workspace, focus rules, and AI study coach.</p>
+        </div>
+
+        <div class="settings-layout">
+            
+            <!-- LEFT NAVIGATION TABS -->
+            <aside class="settings-tabs">
+                <button class="tab-btn active" onclick="switchTab('appearance', this)">
+                    <i data-lucide="palette"></i> Appearance
+                </button>
+                <button class="tab-btn" onclick="switchTab('focus', this)">
+                    <i data-lucide="timer"></i> Focus & Timer
+                </button>
+                <button class="tab-btn" onclick="switchTab('ai', this)">
+                    <i data-lucide="sparkles"></i> AI Assistant
+                </button>
+                <button class="tab-btn" onclick="switchTab('account', this)">
+                    <i data-lucide="user"></i> Account & Data
+                </button>
+            </aside>
+
+            <!-- RIGHT CONTENT PANELS -->
+            <section class="settings-content">
+
+                <!-- 1. APPEARANCE TAB -->
+                <div id="tab-appearance" class="tab-panel active">
+                    <div class="panel-card">
+                        <h3>Theme & Visual Vibe</h3>
+                        <p class="panel-subtitle">Select your preferred active theme across all workspace tools.</p>
+                        
+                        <div class="theme-grid">
+                            <div class="theme-card-option" onclick="setAppTheme('modern')">
+                                <div class="theme-preview preview-modern"></div>
+                                <span>☀️ Modern Light</span>
+                            </div>
+                            <div class="theme-card-option" onclick="setAppTheme('glass')">
+                                <div class="theme-preview preview-glass"></div>
+                                <span>✨ Glassmorphism</span>
+                            </div>
+                            <div class="theme-card-option" onclick="setAppTheme('nordic')">
+                                <div class="theme-preview preview-nordic"></div>
+                                <span>🌿 Nordic Forest</span>
+                            </div>
+                            <div class="theme-card-option" onclick="setAppTheme('midnight')">
+                                <div class="theme-preview preview-midnight"></div>
+                                <span>🌙 Midnight Cyber</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. FOCUS & TIMER TAB -->
+                <div id="tab-focus" class="tab-panel">
+                    <form action="/settings" method="POST" class="panel-card">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="save_focus_preferences">
+                        <h3>Pomodoro & Focus Timer</h3>
+                        <p class="panel-subtitle">Set default durations for your deep focus study blocks.</p>
+
+                        <div class="form-group">
+                            <label>Default Focus Duration (Minutes)</label>
+                            <select name="focus_mins" class="form-input">
+                                <option value="25" {% if default_focus_mins == 25 %}selected{% endif %}>25 Minutes (Standard Pomodoro)</option>
+                                <option value="45" {% if default_focus_mins == 45 %}selected{% endif %}>45 Minutes (Deep Work Block)</option>
+                                <option value="60" {% if default_focus_mins == 60 %}selected{% endif %}>60 Minutes (Power Study Session)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Break Duration</label>
+                            <select name="break_mins" class="form-input">
+                                <option value="5" {% if break_mins == 5 %}selected{% endif %}>5 Minutes (Short Rest)</option>
+                                <option value="10" {% if break_mins == 10 %}selected{% endif %}>10 Minutes (Standard Break)</option>
+                                <option value="15" {% if break_mins == 15 %}selected{% endif %}>15 Minutes (Extended Rest)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Save Preferences</button>
+                    </form>
+                </div>
+
+                <!-- 3. AI ASSISTANT TAB -->
+                <div id="tab-ai" class="tab-panel">
+                    <form action="/settings" method="POST" class="panel-card">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="save_ai_preferences">
+                        <h3>AI Study Coaching Tone</h3>
+                        <p class="panel-subtitle">Adjust how the AI smart planner gives recommendations and feedback.</p>
+
+                        <div class="form-group">
+                            <label>Coaching Persona</label>
+                            <select name="ai_tone" class="form-input">
+                                <option value="supportive" {% if ai_tone == 'supportive' %}selected{% endif %}>🌿 Gentle & Supportive (Low stress prompts)</option>
+                                <option value="balanced" {% if ai_tone == 'balanced' %}selected{% endif %}>⚡ Balanced & Productivity-Focused (Standard)</option>
+                                <option value="strict" {% if ai_tone == 'strict' %}selected{% endif %}>🔥 Strict Academic Coach (High accountability)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Update AI Coach</button>
+                    </form>
+                </div>
+
+                <!-- 4. ACCOUNT & DATA TAB -->
+                <div id="tab-account" class="tab-panel">
+                    <div class="panel-card">
+                        <form action="/settings" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="save_profile">
+                            <h3>Profile Details</h3>
+                            <div class="form-group">
+                                <label>Display Name</label>
+                                <input type="text" name="display_name" value="{{ display_name }}" class="form-input" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Update Name</button>
+                        </form>
+                    </div>
+
+                    <div class="panel-card card-danger">
+                        <h3>Data & Privacy</h3>
+                        <p class="panel-subtitle">Manage or export your task history and focus logs.</p>
+                        <div class="action-row">
+                            <button class="btn-secondary"><i data-lucide="download"></i> Export Data (CSV)</button>
+                            <form action="/logout" method="POST" style="margin: 0; padding: 0; display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-danger" style="cursor: pointer; font: inherit;"><i data-lucide="log-out"></i> Sign Out</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- JS TABS & THEME CONTROLLER -->
+    <script>
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        const themeNames = {
+            'modern': 'Modern Light',
+            'glass': 'Glassmorphism',
+            'nordic': 'Nordic Forest',
+            'midnight': 'Midnight Cyber'
+        };
+
+        function setAppTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('appTheme', theme);
+            
+            const textSpan = document.getElementById('themeToggleText');
+            if (textSpan) textSpan.textContent = themeNames[theme] || 'Theme';
+            
+            const menu = document.getElementById('themeMenu');
+            if (menu) menu.classList.remove('is-open');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        const btn = document.getElementById('themeDropdownBtn');
+        const menu = document.getElementById('themeMenu');
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.classList.toggle('is-open');
+        });
+
+        document.addEventListener('click', () => {
+            menu.classList.remove('is-open');
+        });
+
+        const activeTheme = localStorage.getItem('appTheme') || 'modern';
+        setAppTheme(activeTheme);
+        lucide.createIcons();
+    </script>
+</body>
+</html>

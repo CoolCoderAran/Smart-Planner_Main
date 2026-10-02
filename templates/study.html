@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Focus Mode — Smart Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='study.css') }}">
+</head>
+<script>
+    (function() {
+        const savedTheme = localStorage.getItem('appTheme') || 'modern';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+</script>
+<body class="focus-body">
+    {% include 'navbar.html' %}
+    
+    <main class="study-container">
+        <!-- TIMER GLASS CARD -->
+        <section class="glass-card timer-card">
+            <span id="phaseLabel" class="phase-badge">Focus Time</span>
+            
+            <div class="timer-ring">
+                <div id="timerDisplay">25:00</div>
+            </div>
+
+            <div class="control-btn-group">
+                <button class="glass-btn primary" onclick="startTimer()">Start</button>
+                <button class="glass-btn" onclick="pauseTimer()">Pause</button>
+                <button class="glass-btn" onclick="resumeTimer()">Resume</button>
+                <button class="glass-btn danger" onclick="resetTimer()">Reset</button>
+            </div>
+        </section>
+
+        <!-- CONFIGURATION PANEL -->
+        <section class="glass-card config-card">
+            <h2>Session Setup</h2>
+            
+            <div class="input-group">
+                <label for="modeSelect">Timer Mode</label>
+                <select id="modeSelect" class="glass-input">
+                    <option value="pomodoro">Pomodoro (25m / 5m)</option>
+                    <option value="deepwork">Deep Work (90m / 15m)</option>
+                    <option value="quickburst">Quick Burst (15m / 3m)</option>
+                    <option value="examcrunch">Exam Crunch (50m / 10m)</option>
+                    <option value="custom">Custom Mode</option>
+                </select>
+            </div>
+
+            <div id="customSettings" class="custom-group" style="display:none;">
+                <div class="input-group">
+                    <label for="customFocus">Focus (Mins)</label>
+                    <input type="number" id="customFocus" value="30" min="1" max="240" class="glass-input">
+                </div>
+                <div class="input-group">
+                    <label for="customBreak">Break (Mins)</label>
+                    <input type="number" id="customBreak" value="5" min="1" max="60" class="glass-input">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="taskSelect">Active Planner Task</label>
+                <select id="taskSelect" class="glass-input">
+                    <option value="">-- General Focus Session --</option>
+                    {% for task in planner_tasks %}
+                    <option value="{{ task.id }}" {% if selected_task_id == task.id %}selected{% endif %}>
+                        {{ task.title }} ({{ task.subject or 'General' }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="goal-wrapper">
+                <div class="goal-text">
+                    <span>Daily Goal Progress</span>
+                    <span id="goalProgressText">0 / 120 mins</span>
+                </div>
+                <div class="goal-bar"><div id="goalFill"></div></div>
+            </div>
+
+            <!-- STREAK DISPLAY -->
+            <div class="streak-wrapper">
+                <div class="streak-box">
+                    <span class="streak-icon">🔥</span>
+                    <div class="streak-info">
+                        <span class="streak-count" id="currentStreak">0 Days</span>
+                        <span class="streak-label">Current Streak</span>
+                    </div>
+                </div>
+                <div class="streak-box">
+                    <span class="streak-icon">🏆</span>
+                    <div class="streak-info">
+                        <span class="streak-count" id="bestStreak">0 Days</span>
+                        <span class="streak-label">Best Streak</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+        
+    <!-- STATS GRID -->
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div class="glass-card stat-card">
+                <h3 id="todayMinutes">0</h3>
+                <p>Today (Mins)</p>
+            </div>
+            <div class="glass-card stat-card">
+                <h3 id="weeklyMinutes">0</h3>
+                <p>This Week (Mins)</p>
+            </div>
+            <div class="glass-card stat-card">
+                <h3 id="totalSessions">0</h3>
+                <p>Completed Sessions</p>
+            </div>
+            <div class="glass-card stat-card">
+                <h3 id="totalMinutes">0</h3>
+                <p>Total Focus Mins</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- BOTTOM UTILITY SECTION -->
+    <section class="study-bottom-section">
+        <div class="glass-card bottom-tab-card">
+            <div class="tab-header">
+                <button class="tab-btn active" onclick="switchTab('history')">Session History</button>
+                <button class="tab-btn" onclick="switchTab('notes')">Quick Notepad</button>
+            </div>
+
+            <div id="tabHistory" class="tab-content active">
+                <div class="table-wrapper">
+                    <table class="session-table">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Mode</th>
+                                <th>Duration</th>
+                                <th>Note</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionHistoryBody">
+                            <tr><td colspan="5" class="empty-msg">Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tabNotes" class="tab-content">
+                <textarea id="brainDumpNotes" class="glass-textarea" placeholder="Jot down quick thoughts, ideas, or distractions here... (Auto-saved)"></textarea>
+            </div>
+        </div>
+
+        <div class="glass-card ambient-card">
+            <h3>Ambient Sounds</h3>
+            <p class="ambient-sub">Select background audio for concentration</p>
+            
+            <div class="ambient-grid">
+                <button class="ambient-btn" onclick="toggleAudio('rain')"><span class="ambient-icon">📻</span><span>Pink Noise</span></button>
+                <button class="ambient-btn" onclick="toggleAudio('lofi')"><span class="ambient-icon">🤎</span><span>Brown Noise</span></button>
+                <button class="ambient-btn" onclick="toggleAudio('waves')"><span class="ambient-icon">🌧️</span><span>Rainstorm</span></button>
+                <button class="ambient-btn" onclick="toggleAudio('forest')"><span class="ambient-icon">☕</span><span>Café</span></button>
+                <button class="ambient-btn" onclick="toggleAudio('cafe')"><span class="ambient-icon">🔥</span><span>Fireplace</span></button>
+                <button class="ambient-btn" onclick="toggleAudio('fire')"><span class="ambient-icon">🧠</span><span>Beta Waves</span></button>
+            </div>
+
+            <audio id="audioRain" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
+            <audio id="audioLofi" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
+            <audio id="audioWaves" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
+            <audio id="audioForest" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
+            <audio id="audioCafe" loop src="https://archive.org/download/FireplaceCrackle1HourLoop/FireplaceCrackle.mp3"></audio>
+            <audio id="audioFire" loop src="https://archive.org/download/BinauralBeatsAlphaBetaThetaDelta_201804/Beta_14Hz_Focus.mp3"></audio>
+        </div>
+    </section>
+        
+    <script src="{{ url_for('static', filename='study.js') }}"></script>
+</body>
+</html>

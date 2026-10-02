@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Smart Planner</title>
+
+    <!-- Pre-load theme immediately to prevent white screen flash -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('appTheme') || 'modern';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
+    <!-- Google Font & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}?v=1.3">
+</head>
+<body>
+
+    <!-- SITE HEADER / NAVIGATION -->
+    {% include 'navbar.html' %}
+
+    <!-- DASHBOARD COMMAND CENTER -->
+    <main class="dashboard-grid">
+
+        <!-- LAYER 1: HEADER & GREETING -->
+        <section class="dashboard-header">
+            <div>
+                <h1>Good {{ greeting_time or 'day' }}, {{ session.get('username') or session.get('user') or 'User' }}! 👋</h1>
+                <p class="date-subtitle"><i data-lucide="calendar-days"></i> {{ current_date_str or 'Here is your unified overview across Planner, Calendar, and Focus Mode.' }}</p>
+            </div>
+            <div class="header-actions">
+                <a href="/planner" class="btn-primary-sm"><i data-lucide="plus"></i> New Task</a>
+                <a href="/focus" class="btn-secondary-sm"><i data-lucide="play"></i> Start Focus</a>
+            </div>
+        </section>
+
+        <!-- LAYER 2: STAT HIGHLIGHT CARDS -->
+        <section class="stats-row">
+            <div class="dash-card stat-card">
+                <div class="stat-icon"><i data-lucide="check-square"></i></div>
+                <div class="stat-data">
+                    <span class="stat-number">{{ pending_tasks_count or 0 }}</span>
+                    <span class="stat-label">Pending Tasks</span>
+                </div>
+            </div>
+
+            <div class="dash-card stat-card">
+                <div class="stat-icon"><i data-lucide="clock"></i></div>
+                <div class="stat-data">
+                    <span class="stat-number">{{ today_focus_mins or focus_mins_today or 0 }}<small>m</small></span>
+                    <span class="stat-label">Focus Today</span>
+                </div>
+            </div>
+
+            <div class="dash-card stat-card">
+                <div class="stat-icon"><i data-lucide="flame"></i></div>
+                <div class="stat-data">
+                    <span class="stat-number">{{ current_streak or 0 }} <small>Days</small></span>
+                    <span class="stat-label">Current Streak</span>
+                </div>
+            </div>
+
+            <div class="dash-card stat-card">
+                <div class="stat-icon"><i data-lucide="calendar"></i></div>
+                <div class="stat-data">
+                    <span class="stat-number">{{ today_events_count or 0 }}</span>
+                    <span class="stat-label">Events Today</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- LAYER 3: PRIMARY WORKLOAD & SIDEBAR -->
+        <section class="dashboard-main-layout">
+            
+            <!-- LEFT COLUMN: TODAY'S PLAN / PRIORITY TASKS -->
+            <div class="dash-card main-plan-card">
+                <div class="dash-card-header">
+                    <div>
+                        <h3>Priority Tasks</h3>
+                        <p class="summary-meta">{{ tasks_remaining_count or pending_tasks_count or 0 }} tasks remaining &bull; {{ estimated_workload_mins or 0 }} min total work</p>
+                    </div>
+                    <a href="/planner" class="dash-card-link">View All <i data-lucide="arrow-right"></i></a>
+                </div>
+
+                <div class="task-list">
+                    {% set display_tasks = today_tasks or priority_tasks %}
+                    {% if display_tasks %}
+                        {% for task in display_tasks %}
+                        <div class="task-item {% if task.completed %}is-completed{% endif %}">
+                            <form action="/planner/complete/{{ task.id }}" method="POST" class="task-complete-form">
+                                {% if csrf_token is defined %}
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% endif %}
+                                <button type="submit" class="task-checkbox" aria-label="Mark task completed" title="Mark complete">
+                                    <i data-lucide="check"></i>
+                                </button>
+                            </form>
+                            <div class="task-details">
+                                <span class="task-title">{{ task.title }}</span>
+                                <span class="task-meta">
+                                    <i data-lucide="clock"></i> {{ task.due_time or task.due_date or 'Today' }}
+                                    {% if task.subject %} &bull; {{ task.subject }}{% endif %}
+                                    {% if task.duration_mins %} &bull; {{ task.duration_mins }}m{% endif %}
+                                </span>
+                            </div>
+                            <span class="priority-pill priority-{{ (task.priority or 'medium') | lower }}">
+                                {{ task.priority or 'Medium' }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i data-lucide="check-circle-2"></i>
+                            <p>No urgent tasks pending! Enjoy your day or add new tasks in the Planner.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: NEXT UP & AI INSIGHT -->
+            <div class="dashboard-sidebar-column">
+                
+                <!-- NEXT UP ACTION ITEM -->
+                <div class="dash-card next-up-card">
+                    <div class="dash-card-header">
+                        <h3>Next Up</h3>
+                        <i data-lucide="zap" class="icon-accent"></i>
+                    </div>
+                    {% if next_up_task %}
+                        <div class="next-up-content">
+                            <h4>{{ next_up_task.title }}</h4>
+                            <p class="next-up-meta"><i data-lucide="clock"></i> {{ next_up_task.due_time or next_up_task.due_date or 'Upcoming' }}</p>
+                            <a href="/focus?task_id={{ next_up_task.id }}" class="btn-focus-launch">
+                                Start Session ({{ next_up_task.duration_mins or 25 }}m) <i data-lucide="arrow-right"></i>
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="muted-text">No urgent tasks scheduled next.</p>
+                    {% endif %}
+                </div>
+
+                <!-- AI INTELLIGENCE HIGHLIGHT -->
+                <div class="dash-card dash-card-ai">
+                    <div class="dash-card-header">
+                        <h3><i data-lucide="sparkles"></i> AI Suggestion</h3>
+                        <a href="/ai" class="dash-card-link">Ask AI</a>
+                    </div>
+                    <p class="ai-insight-text">
+                        "{{ ai_suggestion_text or 'Maintain steady focus blocks today. Complete your longest task first to minimize evening stress.' }}"
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- LAYER 4: SECONDARY PILLAR SNAPSHOTS -->
+        <section class="dashboard-tri-grid">
+
+            <!-- CALENDAR SCHEDULE CARD -->
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <h3>Today's Schedule</h3>
+                    <a href="/calendar" class="dash-card-link">Open Calendar</a>
+                </div>
+                <div class="schedule-list">
+                    {% set display_events = today_events or upcoming_events %}
+                    {% if display_events %}
+                        {% for event in display_events %}
+                        <div class="schedule-item">
+                            <div class="time-block">
+                                <span class="start-time">
+                                    {% if event.start_dt %}
+                                        {{ event.start_dt.strftime('%I:%M %p') }}
+                                    {% elif event.is_all_day %}
+                                        All day
+                                    {% else %}
+                                        {{ event.date_str or 'Today' }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="event-info">
+                                <strong>{{ event.title }}</strong>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty-state">No scheduled calendar events for today.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- FOCUS CARD -->
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <h3>Focus Stats</h3>
+                    <a href="/focus" class="dash-card-link">Launch</a>
+                </div>
+                <div class="stat-block">
+                    <span class="stat-number">{{ today_focus_mins or focus_mins_today or 0 }} <small>mins</small></span>
+                    <span class="stat-label">Logged today</span>
+                </div>
+            </div>
+
+            <!-- ANALYTICS CARD -->
+            <div class="dash-card">
+                <div class="dash-card-header">
+                    <h3>Weekly Progress</h3>
+                    <a href="/analytics" class="dash-card-link">Analytics</a>
+                </div>
+                <div class="stat-block">
+                    <span class="stat-number">{{ completion_rate or 0 }}%</span>
+                    <span class="stat-label">Tasks completed this week</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width: {{ completion_rate or 0 }}%;"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- JAVASCRIPT CONTROLLERS -->
+    <script>
+        const themeNames = {
+            'modern': 'Modern Light',
+            'glass': 'Glassmorphism',
+            'nordic': 'Nordic Forest',
+            'midnight': 'Midnight Cyber'
+        };
+
+        function setAppTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('appTheme', theme);
+            
+            const textSpan = document.getElementById('themeToggleText');
+            if (textSpan) {
+                textSpan.textContent = themeNames[theme] || 'Theme';
+            }
+            
+            const menu = document.getElementById('themeMenu');
+            if (menu) menu.classList.remove('is-open');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Toggle Menu Visibility if embedded directly
+        const btn = document.getElementById('themeDropdownBtn');
+        const menu = document.getElementById('themeMenu');
+
+        if (btn && menu) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.classList.toggle('is-open');
+            });
+
+            document.addEventListener('click', () => {
+                menu.classList.remove('is-open');
+            });
+        }
+
+        // Initial setup
+        const activeTheme = localStorage.getItem('appTheme') || 'modern';
+        setAppTheme(activeTheme);
+        lucide.createIcons();
+    </script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — Smart Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Base Page Setup */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1f2937;
+        }
+
+        /* NAVIGATION BAR STYLES */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 12px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .logo img {
+            height: 36px;
+            width: auto;
+            display: block;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #475569;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #2563eb;
+        }
+
+        /* Account Dropdown Styles */
+        .account-menu {
+            position: relative;
+        }
+
+        .account-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #334155;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .account-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .account-avatar {
+            width: 24px;
+            height: 24px;
+            background: #2563eb;
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .account-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            min-width: 160px;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* Show dropdown on hover or focus */
+        .account-menu:hover .account-dropdown,
+        .account-menu:focus-within .account-dropdown {
+            display: block;
+        }
+
+        .account-dropdown a {
+            display: block;
+            padding: 10px 16px;
+            color: #334155;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+
+        .account-dropdown a:hover {
+            background: #f8fafc;
+            color: #2563eb;
+        }
+
+        /* Auth Buttons */
+        .nav-login {
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-login:hover {
+            color: #2563eb;
+        }
+
+        .nav-signup, .terms-back-btn {
+            background-color: #2563eb;
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .nav-signup:hover, .terms-back-btn:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* Embedded layout overrides for modern legal page styling */
+        .legal-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 40px;
+            line-height: 1.6;
+        }
+
+        .legal-sidebar {
+            position: sticky;
+            top: 80px;
+            height: fit-content;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .legal-sidebar h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .legal-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .legal-sidebar li {
+            margin-bottom: 8px;
+        }
+
+        .legal-sidebar a {
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .legal-sidebar a:hover {
+            color: #2563eb;
+        }
+
+        .legal-content {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .legal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 24px;
+            margin-bottom: 32px;
+        }
+
+        .legal-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border-radius: 9999px;
+            margin-bottom: 12px;
+        }
+
+        .summary-box {
+            background: #f8fafc;
+            border-left: 4px solid #2563eb;
+            padding: 16px 20px;
+            margin: 20px 0 28px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .legal-content h2 {
+            font-size: 1.35rem;
+            color: #0f172a;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        .legal-content h2:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .legal-content h3 {
+            font-size: 1.05rem;
+            color: #1e293b;
+            margin-top: 20px;
+        }
+
+        .legal-content p, .legal-content li {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+
+        .legal-content ul {
+            padding-left: 20px;
+        }
+
+        .legal-actions {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        @media (max-width: 850px) {
+            .navbar {
+                padding: 12px 16px;
+            }
+            .nav-links {
+                display: none;
+            }
+            .legal-container {
+                grid-template-columns: 1fr;
+            }
+            .legal-sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- NAVIGATION BAR -->
+<nav class="navbar">
+
+    <!-- LEFT SIDE -->
+    <div class="nav-left">
+        <a href="/" class="logo">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="Smart Planner Logo">
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/">Features</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="nav-right">
+        {% if session.get("username") or session.get("user_id") %}
+        <div class="account-menu">
+            <button class="account-btn" type="button" aria-haspopup="true">
+                <span class="account-avatar">
+                    {{ (session.get("username") or "U")[0].upper() }}
+                </span>
+                <span class="account-name">
+                    {{ session.get("username", "User") }}
+                </span>
+                &#9662;
+            </button>
+
+            <div class="account-dropdown">
+                <a href="/planner">Dashboard</a>
+                <form action="/logout" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit">Logout</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <a href="/login" class="nav-login">Login</a>
+        <a href="/signup" class="nav-signup">Get Started</a>
+        {% endif %}
+    </div>
+
+</nav>
+
+<!-- MAIN LEGAL CONTENT -->
+<div class="legal-container">
+
+    <!-- Sticky Navigation Sidebar -->
+    <aside class="legal-sidebar">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="#overview">1. Overview</a></li>
+            <li><a href="#data-collection">2. Data We Collect</a></li>
+            <li><a href="#data-use">3. How We Use Data</a></li>
+            <li><a href="#ai-data">4. AI Processing</a></li>
+            <li><a href="#data-sharing">5. Information Sharing</a></li>
+            <li><a href="#cookies">6. Cookies & Tracking</a></li>
+            <li><a href="#security">7. Data Security</a></li>
+            <li><a href="#retention">8. Data Retention</a></li>
+            <li><a href="#rights">9. User Rights</a></li>
+            <li><a href="#children">10. Children's Privacy</a></li>
+            <li><a href="#third-parties">11. Third-Party Links</a></li>
+            <li><a href="#changes">12. Policy Changes</a></li>
+            <li><a href="#contact">13. Contact Us</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="legal-content">
+
+        <div class="legal-header">
+            <span class="legal-badge">Legal Documentation</span>
+            <h1>Privacy Policy</h1>
+            <p class="terms-effective"><strong>Last Updated:</strong> September 13, 2026 &bull; <strong>Version:</strong> 2.0</p>
+        </div>
+
+        <p class="terms-intro">
+            At Smart Planner ("Smart Planner," "we," "us," or "our"), we respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, process, and safeguard your data when you visit and interact with our web application and integrated AI services (collectively, the "Service").
+        </p>
+
+        <div class="summary-box">
+            <strong>TL;DR / Quick Summary:</strong> We only collect the information necessary to provide you with an intelligent planning web workspace—such as your account details, task list inputs, and calendar entries. We do not sell your personal data. Your inputs are processed securely by our AI engine solely to auto-schedule and organize your tasks.
+        </div>
+
+        <!-- Section 1 -->
+        <h2 id="overview">1. Overview & Scope</h2>
+        <p>This Privacy Policy applies solely to information collected through the Smart Planner web platform. By creating an account or accessing our web services, you acknowledge that you have read and understood how your personal information is managed as described herein.</p>
+
+        <!-- Section 2 -->
+        <h2 id="data-collection">2. Information We Collect</h2>
+        <p>We collect information to provide, personalize, and improve our web services. The data collected falls into three categories:</p>
+
+        <h3>2.1 Information You Provide Directly</h3>
+        <ul>
+            <li><strong>Account Details:</strong> Username, email address, hashed passwords, and profile preferences upon registration.</li>
+            <li><strong>User Content:</strong> Tasks, subtasks, notes, course titles, assignment deadlines, calendar events, and focus session parameters entered into the web app.</li>
+            <li><strong>Communication Data:</strong> Inquiries, feedback, or support tickets sent directly to our administrative team.</li>
+        </ul>
+
+        <h3>2.2 Information Collected Automatically</h3>
+        <ul>
+            <li><strong>Usage Logs:</strong> Feature interactions, click paths, timestamped log entries, and session durations within the web application.</li>
+            <li><strong>Device & Web Information:</strong> IP address, web browser type, operating system version, referring URL, and preferred language settings.</li>
+        </ul>
+
+        <!-- Section 3 -->
+        <h2 id="data-use">3. How We Use Your Information</h2>
+        <p>We process your data strictly for operational, support, and functional purposes, including:</p>
+        <ul>
+            <li>Operating, rendering, and maintaining the core web application UI and features;</li>
+            <li>Synchronizing tasks, calendars, and focus timers across your active web browser sessions;</li>
+            <li>Authenticating account logins and preserving secure user sessions;</li>
+            <li>Analyzing system performance metrics to fix bugs and improve site speed;</li>
+            <li>Responding to customer service inquiries and sending necessary technical notifications.</li>
+        </ul>
+
+        <!-- Section 4 -->
+        <h2 id="ai-data">4. AI Engine Data Processing</h2>
+        <p>Our integrated AI tools ("Terra AI") analyze text inputs, deadlines, and task constraints to generate automated schedules and prioritize user workloads.</p>
+        <ul>
+            <li><strong>Processing Scope:</strong> User prompts and task parameters submitted for AI analysis are processed exclusively to generate contextual schedules, task estimates, and insights.</li>
+            <li><strong>No Ad Targeting:</strong> Data processed through AI Features is never utilized for targeted advertising, marketing profiles, or data broker distribution.</li>
+        </ul>
+
+        <!-- Section 5 -->
+        <h2 id="data-sharing">5. Information Sharing & Disclosure</h2>
+        <p>Smart Planner does not sell, rent, or trade your personal data to third parties. We disclose personal data only under the following limited circumstances:</p>
+        <ul>
+            <li><strong>Service Providers:</strong> We share essential data with vetted cloud infrastructure providers, database hosting platforms (e.g., Render), and AI engine partners strictly to host and render the Service.</li>
+            <li><strong>Legal Obligations:</strong> We may disclose data if required to do so by applicable court orders, subpoenas, or lawful government investigations.</li>
+            <li><strong>Platform Protection:</strong> We disclose information when necessary to enforce our Terms of Service or protect the security and safety of our servers and users.</li>
+        </ul>
+
+        <!-- Section 6 -->
+        <h2 id="cookies">6. Cookies & Web Storage</h2>
+        <p>Smart Planner utilizes essential HTTP cookies and browser storage mechanisms (such as SessionStorage and LocalStorage) to keep you logged in, store theme preferences, and maintain web app states. You can control cookie preferences in your browser settings, though disabling essential cookies may impact web application functionality.</p>
+
+        <!-- Section 7 -->
+        <h2 id="security">7. Data Security Measures</h2>
+        <p>We implement modern security controls to protect user data against unauthorized access, alteration, or disclosure. These measures include HTTPS encryption in transit, secure database hashing for credentials, and restricted access privileges for web backend operations. However, no internet transmission is completely secure, and we cannot guarantee absolute security.</p>
+
+        <!-- Section 8 -->
+        <h2 id="retention">8. Data Retention & Purging</h2>
+        <p>We retain your account data and User Content for as long as your account remains active. Smart Planner does not currently offer a self-service "delete my account" control within the app. To request deletion of your account and associated data, please contact us using the details in Section 13 below; we will verify your request and permanently purge your personal information, task history, and stored preferences from our primary database tables.</p>
+
+        <!-- Section 9 -->
+        <h2 id="rights">9. User Data Rights</h2>
+        <p>Depending on your location, you hold specific rights regarding your personal data, including:</p>
+        <ul>
+            <li><strong>Access:</strong> The right to view the personal data we store about your account.</li>
+            <li><strong>Correction:</strong> The right to update or edit inaccurate account details within your settings.</li>
+            <li><strong>Deletion:</strong> The right to request the complete deletion of your account and associated task data.</li>
+            <li><strong>Data Portability:</strong> The right to request an export of your stored tasks and schedule entries.</li>
+        </ul>
+
+        <!-- Section 10 -->
+        <h2 id="children">10. Children's Privacy</h2>
+        <p>Smart Planner does not knowingly collect or solicit personal information from individuals under 13 years of age. If we learn that we have inadvertently collected personal data from a child under 13, we will promptly delete that information from our records.</p>
+
+        <!-- Section 11 -->
+        <h2 id="third-parties">11. Third-Party Links</h2>
+        <p>Our web platform may contain links to external sites or external integrations. We are not responsible for the privacy practices or content of third-party websites, and we encourage you to review their respective privacy policies.</p>
+
+        <!-- Section 12 -->
+        <h2 id="changes">12. Changes to This Privacy Policy</h2>
+        <p>We may update this Privacy Policy periodically to reflect system updates or legal changes. We will notify users of significant material updates by updating the "Last Updated" timestamp at the top of this page. Continued use of the Service following published modifications indicates agreement to the updated Privacy Policy.</p>
+
+        <!-- Section 13 -->
+        <h2 id="contact">13. Contact Information</h2>
+        <p>For questions, privacy inquiries, or data requests regarding this Privacy Policy, please contact us at:</p>
+        <ul>
+            <li><strong>Email:</strong> aran.rath@outlook.com</li>
+            <li><strong>Web Support:</strong> <a href="/contact">smart_planner_for_school.onrender.com/contact</a></li>
+        </ul>
+
+        <div class="legal-actions">
+            <a href="/signup" class="terms-back-btn">Return to Sign Up</a>
+            <a href="/index" class="terms-back-btn">Return to Dashboard</a>
+        </div>
+
+    </main>
+
+</div>
+
+</body>
+</html>

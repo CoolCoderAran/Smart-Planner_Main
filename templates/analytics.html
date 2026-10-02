@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Planner — Analytics</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='analytics.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+</head>
+<script>
+    (function() {
+        const savedTheme = localStorage.getItem('appTheme') || 'modern';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+</script>
+<body>
+  <div class="glass-container">
+    {% include 'navbar.html' %}
+    <header style="margin-top: 20px;">
+      <h1>📊 Analytics Dashboard</h1>
+      <p>Performance patterns directly from your Planner and Focus sessions.</p>
+    </header>
+
+    <!-- Core Metrics Cards -->
+    <section class="metrics-grid">
+      <div class="glass-card">
+        <h3>Total Tasks</h3>
+        <span id="metric-total-tasks" class="stat-value">0</span>
+      </div>
+      <div class="glass-card">
+        <h3>Completion Rate</h3>
+        <span id="metric-completion-rate" class="stat-value">0%</span>
+      </div>
+      <div class="glass-card">
+        <h3>Overdue Tasks</h3>
+        <span id="metric-overdue" class="stat-value text-alert">0</span>
+      </div>
+      <div class="glass-card">
+        <h3>Active Streak</h3>
+        <span id="metric-streak" class="stat-value">🔥 0 Days</span>
+      </div>
+      <div class="glass-card">
+        <h3>Planned vs Actual Focus</h3>
+        <span id="metric-time-comparison" class="stat-value">0m / 0m</span>
+      </div>
+    </section>
+
+    <!-- Visualizations Grid -->
+    <section class="charts-grid">
+      <div class="glass-card chart-card">
+        <h3>Task & Focus Trends (7 Days)</h3>
+        <canvas id="trendChart"></canvas>
+      </div>
+      <div class="glass-card chart-card">
+        <h3>Workload by Subject</h3>
+        <canvas id="subjectChart"></canvas>
+      </div>
+      <div class="glass-card chart-card">
+        <h3>Priority Distribution</h3>
+        <canvas id="priorityChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Achievements Section -->
+    <section class="glass-card achievements-section">
+      <h3>🏆 Achievements</h3>
+      <div id="achievements-container" class="achievements-grid"></div>
+    </section>
+  </div>
+
+  <script src="{{ url_for('static', filename='analytics.js') }}"></script>
+</body>
+</html>
+
+

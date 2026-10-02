@@ -1,0 +1,55 @@
+<header class="app-navbar">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <div class="nav-inner">
+    <!-- RIGHT SIDE (Logo) -->
+    <div class="nav-right">
+      <a href="/" class="app-logo-link" title="Smart Planner Home">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="Smart Planner Logo" class="nav-logo-img">
+        <link rel="stylesheet" href="{{ url_for('static', filename='navbar.css') }}">
+      </a>
+    </div>
+
+    <!-- CENTER: Navigation Links -->
+    <nav class="nav-center">
+      <a href="/planner" class="nav-pill {% if active_page == 'planner' %}active{% endif %}">Planner</a>
+      <a href="/calendar" class="nav-pill {% if active_page == 'calendar' %}active{% endif %}">Calendar</a>
+      <a href="/ai" class="nav-pill {% if active_page == 'ai' %}active{% endif %}">AI Assistant</a>
+      <a href="/study" class="nav-pill {% if active_page == 'focus' %}active{% endif %}">Focus Mode</a>
+      <a href="/analytics" class="nav-pill {% if active_page == 'analytics' %}active{% endif %}">Analytics</a>
+    </nav>
+
+    <!-- LEFT SIDE (Account / Auth with CSRF-protected Logout) -->
+    <div class="nav-left">
+      {% if session.get("user_id") %}
+      <div class="account-chip-wrapper">
+        <button class="account-chip" type="button">
+          <span class="account-avatar">{{ session.get("username", "U")[0].upper() }}</span>
+          <span class="account-username">{{ session.get("username", "User") }}</span>
+        </button>
+
+        <div class="account-dropdown">
+          <div class="dropdown-user-info">
+            <span class="user-title">Logged in as</span>
+            <strong class="user-display">{{ session.get("username", "User") }}</strong>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="/dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+          <a href="/settings"><i data-lucide="settings"></i> Settings</a>
+          <div class="dropdown-divider"></div>
+          <form action="/logout" method="POST" class="logout-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="dropdown-logout-btn">
+              <i data-lucide="log-out"></i> Logout
+            </button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div class="auth-guest-actions">
+        <a href="/login" class="nav-link-btn">Sign In</a>
+        <a href="/signup" class="nav-primary-btn">Get Started</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</header>
