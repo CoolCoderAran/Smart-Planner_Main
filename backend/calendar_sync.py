@@ -135,11 +135,13 @@ def get_feed(user_id):
     cursor = conn.cursor()
  
     # 1. Fetch standalone calendar events that overlap the requested window.
-    cursor.execute("""
+cursor.execute("""
         SELECT id, title, description, location, category, start_time, end_time, is_all_day,
                planner_task_id, google_event_id, 'event' AS entity_type
         FROM events
-        WHERE user_id = ? AND is_deleted = 0 AND start_time < ? AND end_time > ?
+        WHERE user_id = ? AND is_deleted = 0
+          AND datetime(start_time) < datetime(?)
+          AND datetime(end_time) > datetime(?)
     """, (user_id, end_bound, start_bound))
     events = [dict(row) for row in cursor.fetchall()]
     for event in events:
