@@ -123,7 +123,7 @@ def handle_unexpected_error(e):
     app.logger.exception("Unexpected error")
     if request.path.startswith("/api/") or request.is_json:
         return jsonify({"error": "An unexpected error occurred.", "code": "UNEXPECTED_ERROR"}), 500
-    return render_template("404.html"), 500
+    return render_template("500.html"), 500
 
 
 def _json_error(message, code, status):
