@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import achievements
 import db
 import planner
@@ -19,7 +22,6 @@ from ai import build_user_context, query_terra_ai
 from auth import get_authenticated_user_id, require_auth
 from guardrails import check_rate_limit, validate_scope
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
