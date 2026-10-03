@@ -115,7 +115,7 @@ def internal_error(e):
     app.logger.exception("Unhandled server error")
     if request.path.startswith("/api/") or request.is_json:
         return jsonify({"error": "An internal server error occurred.", "code": "INTERNAL_ERROR"}), 500
-    return render_template("404.html"), 500
+    return render_template("500.html"), 500
 
 
 @app.errorhandler(Exception)
