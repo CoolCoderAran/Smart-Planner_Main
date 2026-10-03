@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import os
 import secrets
 from pathlib import Path
-
+import sys 
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
@@ -18,6 +18,8 @@ import streaks
 from ai import build_user_context, query_terra_ai
 from auth import get_authenticated_user_id, require_auth
 from guardrails import check_rate_limit, validate_scope
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
