@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import os
 import secrets
 from pathlib import Path
-import sys 
+import sys
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
