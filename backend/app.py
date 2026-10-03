@@ -553,6 +553,12 @@ def study():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _auth_redirect()
+    
+    user = _user_row(user_id)
+    if user is None:
+        session.clear()
+        return _auth_redirect()
+
     rows = db.get_db().execute(
         """SELECT id, title, subject
            FROM planner_tasks
@@ -560,13 +566,13 @@ def study():
           ORDER BY COALESCE(due_date, '9999-12-31') ASC, priority ASC, id ASC""",
         (user_id,),
     ).fetchall()
-    user = _user_row(user_id)
+
     return render_template(
         "study.html",
         planner_tasks=[dict(row) for row in rows],
         selected_task_id=request.args.get("task_id", type=int),
-        default_focus_mins=user["default_focus_mins"] or 25,
-        break_mins=user["break_mins"] or 5,
+        default_focus_mins=user["default_focus_mins"] if user["default_focus_mins"] is not None else 25,
+        break_mins=user["break_mins"] if user["break_mins"] is not None else 5,
     )
 
 
