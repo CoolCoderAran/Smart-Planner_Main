@@ -576,6 +576,19 @@ def study():
     )
 
 
+def _parse_utc_timestamp(ts_str):
+    if not ts_str:
+        return None
+    try:
+        clean_str = str(ts_str).replace(" ", "T").replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
 @app.route("/focus/start", methods=["POST"])
 def start_focus():
     user_id = get_authenticated_user_id()
@@ -609,29 +622,15 @@ def start_focus():
     if active:
         return _json_error("A Focus session is already active.", "FOCUS_ALREADY_ACTIVE", 409)
 
-    now = _utc_now().strftime("%Y-%m-%d %H:%M:%S")
+    now_iso = _utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
     cursor = conn.execute(
         """INSERT INTO focus_sessions
            (user_id, task_id, started_at, completed_at, duration_minutes, status, mode)
            VALUES (?, ?, ?, NULL, 0, 'active', ?)""",
-        (user_id, task_id, now, mode),
+        (user_id, task_id, now_iso, mode),
     )
     conn.commit()
-    return jsonify({"success": True, "session_id": cursor.lastrowid, "started_at": now})
-
-
-@app.route("/focus/active")
-def active_focus():
-    user_id = get_authenticated_user_id()
-    if user_id is None:
-        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    row = db.get_db().execute(
-        """SELECT id, task_id, started_at, mode, paused_at, total_paused_seconds
-           FROM focus_sessions WHERE user_id = ? AND status = 'active'
-           ORDER BY started_at DESC LIMIT 1""",
-        (user_id,),
-    ).fetchone()
-    return jsonify({"active": dict(row) if row else None})
+    return jsonify({"success": True, "session_id": cursor.lastrowid, "started_at": now_iso})
 
 
 @app.route("/focus/pause", methods=["POST"])
@@ -646,50 +645,17 @@ def pause_focus():
         return _json_error("A valid focus session ID is required.", "INVALID_SESSION_ID", 400)
 
     conn = db.get_db()
-    now = _utc_now().strftime("%Y-%m-%d %H:%M:%S")
+    now_iso = _utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
     changed = conn.execute(
         """UPDATE focus_sessions
               SET paused_at = ?
             WHERE id = ? AND user_id = ? AND status = 'active' AND paused_at IS NULL""",
-        (now, session_id, user_id),
+        (now_iso, session_id, user_id),
     ).rowcount
     conn.commit()
     if not changed:
         return _json_error("Focus session is not active or is already paused.", "SESSION_NOT_PAUSABLE", 409)
-    return jsonify({"success": True, "session_id": session_id, "paused_at": now})
-
-
-@app.route("/focus/resume", methods=["POST"])
-def resume_focus():
-    user_id = get_authenticated_user_id()
-    if user_id is None:
-        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    data = request.get_json(silent=True) or {}
-    try:
-        session_id = int(data.get("session_id"))
-    except (TypeError, ValueError):
-        return _json_error("A valid focus session ID is required.", "INVALID_SESSION_ID", 400)
-
-    conn = db.get_db()
-    row = conn.execute(
-        """SELECT paused_at, total_paused_seconds FROM focus_sessions
-            WHERE id = ? AND user_id = ? AND status = 'active'""",
-        (session_id, user_id),
-    ).fetchone()
-    if not row or not row["paused_at"]:
-        return _json_error("Focus session is not currently paused.", "SESSION_NOT_PAUSED", 409)
-
-    paused_since = _parse_utc_timestamp(row["paused_at"])
-    pause_duration = max(0, (_utc_now() - paused_since).total_seconds()) if paused_since else 0
-    new_total_paused = (row["total_paused_seconds"] or 0) + round(pause_duration)
-
-    conn.execute(
-        """UPDATE focus_sessions SET paused_at = NULL, total_paused_seconds = ?
-            WHERE id = ? AND user_id = ?""",
-        (new_total_paused, session_id, user_id),
-    )
-    conn.commit()
-    return jsonify({"success": True, "session_id": session_id, "total_paused_seconds": new_total_paused})
+    return jsonify({"success": True, "session_id": session_id, "paused_at": now_iso})
 
 
 @app.route("/focus/complete", methods=["POST"])
@@ -752,13 +718,14 @@ def complete_focus():
 
     elapsed_seconds = max(0, (now - started).total_seconds() - total_paused_seconds)
     elapsed_minutes = max(1, round(elapsed_seconds / 60))
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     updated = conn.execute(
         """UPDATE focus_sessions
               SET completed_at = ?, duration_minutes = ?, status = 'completed', paused_at = NULL,
                   note = COALESCE(NULLIF(?, ''), note)
             WHERE id = ? AND user_id = ? AND status = 'active'""",
-        (now.strftime("%Y-%m-%d %H:%M:%S"), elapsed_minutes, note, session_id, user_id),
+        (now_iso, elapsed_minutes, note, session_id, user_id),
     ).rowcount
     conn.commit()
 
@@ -777,8 +744,6 @@ def complete_focus():
         "minutes": elapsed_minutes,
         "message": "Focus session completed successfully.",
     })
-
-
 @app.route("/focus/abandon", methods=["POST"])
 def abandon_focus():
     user_id = get_authenticated_user_id()
