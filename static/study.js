@@ -36,45 +36,54 @@ function postJSON(url, payload) {
 
 function getFocusMinutes() {
     if (currentMode === "custom") {
-        return Math.max(1, parseInt(document.getElementById("customFocus").value, 10) || 25);
+        const val = parseInt(document.getElementById("customFocus")?.value, 10);
+        return isNaN(val) || val < 1 ? 25 : val;
     }
-    return MODES[currentMode].focus;
+    return MODES[currentMode]?.focus || 25;
 }
 
 function getBreakMinutes() {
     if (currentMode === "custom") {
-        return Math.max(1, parseInt(document.getElementById("customBreak").value, 10) || 5);
+        const val = parseInt(document.getElementById("customBreak")?.value, 10);
+        return isNaN(val) || val < 1 ? 5 : val;
     }
-    return MODES[currentMode].break;
+    return MODES[currentMode]?.break || 5;
 }
 
 function loadMode() {
-    currentMode = document.getElementById("modeSelect").value;
-    document.getElementById("customSettings").style.display =
-        currentMode === "custom" ? "grid" : "none";
+    if (isRunning || activeSessionId) return;
 
-    if (!isRunning && !activeSessionId) {
-        isBreak = false;
-        secondsRemaining = getFocusMinutes() * 60;
-        document.getElementById("phaseLabel").innerText = "Focus Time";
-        updateDisplay();
+    const modeSelect = document.getElementById("modeSelect");
+    if (modeSelect) currentMode = modeSelect.value;
+
+    const customSettings = document.getElementById("customSettings");
+    if (customSettings) {
+        customSettings.style.display = currentMode === "custom" ? "grid" : "none";
     }
+
+    isBreak = false;
+    secondsRemaining = getFocusMinutes() * 60;
+    const phaseLabel = document.getElementById("phaseLabel");
+    if (phaseLabel) phaseLabel.innerText = "Focus Time";
+    updateDisplay();
 }
 
 function updateDisplay() {
+    const display = document.getElementById("timerDisplay");
+    if (!display) return;
+    
     const minutes = Math.floor(Math.max(0, secondsRemaining) / 60);
     const seconds = Math.max(0, secondsRemaining) % 60;
-    document.getElementById("timerDisplay").innerText =
-        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    display.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 async function startTimer() {
-    if (isRunning || isBreak) return;
+    if (isRunning) return;
 
     try {
-        if (!activeSessionId) {
+        if (!isBreak && !activeSessionId) {
             const data = await postJSON("/focus/start", {
-                task_id: document.getElementById("taskSelect").value || null,
+                task_id: document.getElementById("taskSelect")?.value || null,
                 mode: currentMode
             });
             activeSessionId = data.session_id;
@@ -82,25 +91,40 @@ async function startTimer() {
             activeTotalPausedSeconds = 0;
             activePausedAt = null;
         }
+
         isRunning = true;
         isPaused = false;
         clearInterval(timer);
+
         timer = setInterval(() => {
-            if (!activeStartedAt) return;
-            const elapsedRaw = Math.floor(
-                (Date.now() - new Date(activeStartedAt).getTime()) / 1000
-            );
-            const elapsed = Math.max(0, elapsedRaw - activeTotalPausedSeconds);
-            secondsRemaining = Math.max(0, getFocusMinutes() * 60 - elapsed);
+            if (!isBreak && activeStartedAt) {
+                const startTime = new Date(activeStartedAt).getTime();
+                if (isNaN(startTime)) {
+                    // Fallback local countdown if server timestamp format is invalid
+                    secondsRemaining--;
+                } else {
+                    const elapsedRaw = Math.floor((Date.now() - startTime) / 1000);
+                    const elapsed = Math.max(0, elapsedRaw - activeTotalPausedSeconds);
+                    secondsRemaining = Math.max(0, (getFocusMinutes() * 60) - elapsed);
+                }
+            } else {
+                secondsRemaining--;
+            }
+
             updateDisplay();
+
             if (secondsRemaining <= 0) {
                 clearInterval(timer);
                 isRunning = false;
-                sessionFinished();
+                if (!isBreak) {
+                    sessionFinished();
+                } else {
+                    switchPhase();
+                }
             }
-        }, 500);
+        }, 1000);
     } catch (error) {
-        alert(error.message);
+        alert(error.message || "Failed to start timer session.");
     }
 }
 
@@ -109,12 +133,13 @@ async function pauseTimer() {
     clearInterval(timer);
     isRunning = false;
     isPaused = true;
+    
     if (!activeSessionId) return;
     try {
         const data = await postJSON("/focus/pause", { session_id: activeSessionId });
         activePausedAt = data.paused_at;
     } catch (error) {
-        console.error("Could not pause focus session on the server:", error);
+        console.error("Could not pause focus session on server:", error);
     }
 }
 
@@ -123,10 +148,10 @@ async function resumeTimer() {
     if (activeSessionId && isPaused) {
         try {
             const data = await postJSON("/focus/resume", { session_id: activeSessionId });
-            activeTotalPausedSeconds = data.total_paused_seconds;
+            activeTotalPausedSeconds = data.total_paused_seconds || 0;
             activePausedAt = null;
         } catch (error) {
-            console.error("Could not resume focus session on the server:", error);
+            console.error("Could not resume focus session on server:", error);
         }
     }
     isPaused = false;
@@ -137,6 +162,7 @@ async function resetTimer() {
     clearInterval(timer);
     isRunning = false;
     isPaused = false;
+    
     if (activeSessionId) {
         try {
             await postJSON("/focus/abandon", { session_id: activeSessionId });
@@ -144,13 +170,16 @@ async function resetTimer() {
             console.error("Could not abandon focus session:", error);
         }
     }
+    
     activeSessionId = null;
     activeStartedAt = null;
     activeTotalPausedSeconds = 0;
     activePausedAt = null;
     isBreak = false;
     secondsRemaining = getFocusMinutes() * 60;
-    document.getElementById("phaseLabel").innerText = "Focus Time";
+    
+    const phaseLabel = document.getElementById("phaseLabel");
+    if (phaseLabel) phaseLabel.innerText = "Focus Time";
     updateDisplay();
 }
 
@@ -164,11 +193,6 @@ async function sessionFinished() {
         });
         await loadStats();
         await loadHistory();
-        if (data.already === "completed") {
-            console.log("This Focus session was already completed elsewhere (e.g. another tab).");
-        } else {
-            console.log(`Recorded ${data.minutes} server-authoritative focus minutes.`);
-        }
     } catch (error) {
         console.error("Failed to complete focus session:", error);
     } finally {
@@ -182,13 +206,14 @@ async function sessionFinished() {
 }
 
 function switchPhase() {
+    const phaseLabel = document.getElementById("phaseLabel");
     if (!isBreak) {
-        document.getElementById("phaseLabel").innerText = "Break Time";
+        if (phaseLabel) phaseLabel.innerText = "Break Time";
         secondsRemaining = getBreakMinutes() * 60;
         isBreak = true;
     } else {
         isBreak = false;
-        document.getElementById("phaseLabel").innerText = "Focus Time";
+        if (phaseLabel) phaseLabel.innerText = "Focus Time";
         secondsRemaining = getFocusMinutes() * 60;
     }
     updateDisplay();
@@ -205,19 +230,22 @@ async function restoreActiveSession() {
         activeStartedAt = data.active.started_at;
         activeTotalPausedSeconds = data.active.total_paused_seconds || 0;
         activePausedAt = data.active.paused_at || null;
-        currentMode = data.active.mode || "focus";
-        if (!MODES[currentMode] && currentMode !== "custom") currentMode = "pomodoro";
-        document.getElementById("modeSelect").value = currentMode;
+        currentMode = data.active.mode || "pomodoro";
+        
+        const modeSelect = document.getElementById("modeSelect");
+        if (modeSelect) modeSelect.value = currentMode;
 
         let pausedSoFar = activeTotalPausedSeconds;
         if (activePausedAt) {
             pausedSoFar += Math.floor((Date.now() - new Date(activePausedAt).getTime()) / 1000);
         }
-        const elapsed = Math.max(0, Math.floor(
-            (Date.now() - new Date(activeStartedAt).getTime()) / 1000
-        ) - pausedSoFar);
-        secondsRemaining = Math.max(0, getFocusMinutes() * 60 - elapsed);
-        document.getElementById("phaseLabel").innerText = "Focus Time";
+        
+        const startTime = new Date(activeStartedAt).getTime();
+        const elapsed = Math.max(0, Math.floor((Date.now() - startTime) / 1000) - pausedSoFar);
+        secondsRemaining = Math.max(0, (getFocusMinutes() * 60) - elapsed);
+        
+        const phaseLabel = document.getElementById("phaseLabel");
+        if (phaseLabel) phaseLabel.innerText = "Focus Time";
         updateDisplay();
 
         if (secondsRemaining <= 0) {
@@ -229,7 +257,7 @@ async function restoreActiveSession() {
             startTimer();
         }
     } catch (error) {
-        console.error("Could not restore active Focus session.", error);
+        console.error("Could not restore active focus session.", error);
     }
 }
 
@@ -259,15 +287,13 @@ async function loadStats() {
 function switchTab(tabName) {
     document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
     document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+    
     const index = tabName === "history" ? 0 : 1;
     document.querySelectorAll(".tab-btn")[index]?.classList.add("active");
     document.getElementById(tabName === "history" ? "tabHistory" : "tabNotes")?.classList.add("active");
 }
 
-// ---------------------------------------------------------------------------
-// Focus notes — server-side persistence (T150 / T151 / T152)
-// ---------------------------------------------------------------------------
-
+// Focus notes persistence
 let _notesSaveTimer = null;
 
 async function loadFocusNotes() {
@@ -279,7 +305,6 @@ async function loadFocusNotes() {
         const data = await response.json();
         notesElem.value = data.note || "";
     } catch (error) {
-        // Fall back silently — the textarea stays blank.
         console.error("Could not load focus notes:", error);
     }
 }
@@ -296,29 +321,24 @@ function initFocusNotes() {
     const notesElem = document.getElementById("brainDumpNotes");
     if (!notesElem) return;
 
-    // Load persisted notes from the server on page load.
     loadFocusNotes();
 
-    // Debounce saves: wait 800 ms of inactivity before hitting the server.
     notesElem.addEventListener("input", () => {
         clearTimeout(_notesSaveTimer);
         _notesSaveTimer = setTimeout(() => saveFocusNotes(notesElem.value), 800);
     });
 }
 
-// ---------------------------------------------------------------------------
 // Ambient audio
-// ---------------------------------------------------------------------------
-
 let activeAudio = null;
 let activeBtn = null;
 
-function toggleAudio(type) {
-    const audio = document.getElementById({
+function toggleAudio(btnElement, type) {
+    const audioMap = {
         rain: "audioRain", lofi: "audioLofi", waves: "audioWaves",
         forest: "audioForest", cafe: "audioCafe", fire: "audioFire"
-    }[type]);
-    const btn = event.currentTarget;
+    };
+    const audio = document.getElementById(audioMap[type]);
     if (!audio) return;
 
     if (activeAudio === audio) {
@@ -327,24 +347,25 @@ function toggleAudio(type) {
         activeAudio = activeBtn = null;
         return;
     }
-    activeAudio?.pause();
-    activeBtn?.classList.remove("playing");
+    
+    if (activeAudio) activeAudio.pause();
+    if (activeBtn) activeBtn.classList.remove("playing");
+    
     audio.play().catch(() => {});
-    btn.classList.add("playing");
+    btnElement.classList.add("playing");
     activeAudio = audio;
-    activeBtn = btn;
+    activeBtn = btnElement;
 }
 
-// ---------------------------------------------------------------------------
 // Session history
-// ---------------------------------------------------------------------------
-
 async function loadHistory() {
     try {
         const response = await fetch("/get_recent_sessions");
         if (!response.ok) return;
         const sessions = await response.json();
         const tbody = document.getElementById("sessionHistoryBody");
+        if (!tbody) return;
+
         if (!sessions.length) {
             tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No recent sessions found.</td></tr>';
             return;
@@ -370,16 +391,15 @@ async function loadHistory() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Init
-// ---------------------------------------------------------------------------
+// Event Listeners setup
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("modeSelect")?.addEventListener("change", loadMode);
+    document.getElementById("customFocus")?.addEventListener("input", loadMode);
+    document.getElementById("customBreak")?.addEventListener("input", loadMode);
 
-document.getElementById("modeSelect")?.addEventListener("change", loadMode);
-document.getElementById("customFocus")?.addEventListener("change", loadMode);
-document.getElementById("customBreak")?.addEventListener("change", loadMode);
-
-loadMode();
-loadStats();
-loadHistory();
-restoreActiveSession();
-initFocusNotes();
+    loadMode();
+    loadStats();
+    loadHistory();
+    restoreActiveSession();
+    initFocusNotes();
+});
