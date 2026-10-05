@@ -134,9 +134,14 @@ def handle_unexpected_error(e):
 def _json_error(message, code, status):
     return jsonify({"error": message, "code": code}), status
 
-
 def _auth_redirect():
-    if request.path.startswith("/api/") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+    # Only return JSON errors for data-modifying API/AJAX calls.
+    # Standard page navigations (GET) must always redirect to the login page.
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and (
+        request.path.startswith("/api/")
+        or request.is_json
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    ):
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
     return redirect(url_for("login"))
 
