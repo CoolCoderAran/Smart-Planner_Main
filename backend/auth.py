@@ -1,32 +1,30 @@
 from functools import wraps
-from flask import jsonify, session
+from flask import jsonify, redirect, request, session, url_for
 
 
 def get_authenticated_user_id():
-    """Return the canonical immutable user ID from the session."""
-    user_id = session.get("user_id")
-    try:
-        return int(user_id) if user_id is not None else None
-    except (TypeError, ValueError):
-        return None
-
-
-def get_authenticated_user():
-    """Return the username for display/legacy presentation only."""
-    user = session.get("username")
-    return user if isinstance(user, str) and user.strip() else None
+    return session.get("user_id")
 
 
 def require_auth(f):
-    """Require authentication and pass the canonical user_id to the route."""
     @wraps(f)
     def decorated(*args, **kwargs):
         user_id = get_authenticated_user_id()
         if user_id is None:
-            return jsonify({"error": "Unauthorized", "code": "AUTH_REQUIRED"}), 401
-        return f(user_id, *args, **kwargs)
-    return decorated
+            # Return JSON error for POST/PUT/PATCH/DELETE or API/AJAX calls
+            if request.method in {"POST", "PUT", "PATCH", "DELETE"} or (
+                request.path.startswith("/api/")
+                or request.is_json
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            ):
+                return jsonify({"error": "Unauthorized access.", "code": "AUTH_REQUIRED"}), 401
+            
+            # Redirect unauthenticated browser GET page requests to signup
+            return redirect(url_for("signup"))
 
+        return f(user_id, *args, **kwargs)
+
+    return decorated
 
 def require_owned_row(conn, table, row_id, user_id, *, include_deleted=False):
     """Return an owned row using canonical user_id ownership."""
