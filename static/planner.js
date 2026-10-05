@@ -1,14 +1,17 @@
 let editingTaskId = null;
 let currentFilter = "all";
 const selectedTaskIds = new Set();
-const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
 
 function apiRequest(url, method = "GET", payload = null) {
     const options = {
         method,
         headers: {
             "Content-Type": "application/json",
-            "X-CSRF-Token": csrf,
+            "X-CSRF-Token": getCsrfToken(),
             "X-Requested-With": "XMLHttpRequest"
         }
     };
@@ -28,21 +31,33 @@ function toggleSidebar() {
 
 function openModal() {
     editingTaskId = null;
+    const modal = document.getElementById("taskModal");
+    if (!modal) return;
+    
     document.getElementById("modalHeaderTitle").textContent = "Add New Task";
-    document.getElementById("addTaskForm").reset();
+    document.getElementById("addTaskForm")?.reset();
     document.getElementById("modalTaskId").value = "";
     document.getElementById("modalPriority").value = "2";
     document.getElementById("modalDueTime").value = "23:59";
-    document.getElementById("taskModal").classList.add("active");
+    
+    modal.classList.add("active", "open");
+    modal.style.display = "flex";
 }
 
 function closeModal() {
-    document.getElementById("taskModal")?.classList.remove("active");
+    const modal = document.getElementById("taskModal");
+    if (modal) {
+        modal.classList.remove("active", "open");
+        modal.style.display = "none";
+    }
     editingTaskId = null;
 }
 
 function editTask(id, title, subject, minutes, priority, dueDate, dueTime = "") {
     editingTaskId = id;
+    const modal = document.getElementById("taskModal");
+    if (!modal) return;
+
     document.getElementById("modalHeaderTitle").textContent = "Edit Task";
     document.getElementById("modalTaskId").value = id;
     document.getElementById("modalTaskName").value = title;
@@ -51,7 +66,9 @@ function editTask(id, title, subject, minutes, priority, dueDate, dueTime = "") 
     document.getElementById("modalPriority").value = String(priority || 2);
     document.getElementById("modalDueDate").value = dueDate || "";
     document.getElementById("modalDueTime").value = dueTime || "23:59";
-    document.getElementById("taskModal").classList.add("active");
+
+    modal.classList.add("active", "open");
+    modal.style.display = "flex";
 }
 
 async function toggleTask(id) {
@@ -107,8 +124,8 @@ function toggleTaskSelection(taskId, checkbox) {
     else selectedTaskIds.delete(taskId);
     const count = document.getElementById("selectedCount");
     const bar = document.getElementById("batchBar");
-    count.textContent = `${selectedTaskIds.size} task${selectedTaskIds.size === 1 ? "" : "s"} selected`;
-    bar.style.display = selectedTaskIds.size ? "flex" : "none";
+    if (count) count.textContent = `${selectedTaskIds.size} task${selectedTaskIds.size === 1 ? "" : "s"} selected`;
+    if (bar) bar.style.display = selectedTaskIds.size ? "flex" : "none";
 }
 
 async function runBatch(action) {
@@ -143,15 +160,20 @@ function applyFilters() {
     const query = (document.getElementById("search")?.value || "").toLowerCase().trim();
 
     document.querySelectorAll(".task-section").forEach(section => {
-        const matchesFilter = currentFilter === "all" || section.dataset.section === currentFilter;
-        section.style.display = matchesFilter ? "" : "none";
-        if (!matchesFilter) return;
+        const matchesSection = currentFilter === "all" || section.dataset.section === currentFilter;
+        let visibleCardsInSection = 0;
 
         section.querySelectorAll(".task-card").forEach(card => {
+            const matchesCategory = currentFilter === "all" || card.dataset.category === currentFilter || section.dataset.section === currentFilter;
             const text = card.textContent.toLowerCase();
             const matchesSearch = !query || text.includes(query);
-            card.style.display = matchesSearch ? "" : "none";
+            
+            const isVisible = matchesCategory && matchesSearch;
+            card.style.display = isVisible ? "" : "none";
+            if (isVisible) visibleCardsInSection++;
         });
+
+        section.style.display = matchesSection || visibleCardsInSection > 0 ? "" : "none";
     });
 }
 
@@ -204,5 +226,3 @@ document.addEventListener("DOMContentLoaded", () => {
         if (event.key === "Escape") closeModal();
     });
 });
-
-
