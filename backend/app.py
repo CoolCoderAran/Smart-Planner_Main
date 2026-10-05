@@ -76,10 +76,15 @@ def protect_state_changes():
         return None
 
     expected = session.get("csrf_token") or csrf_token()
+    
+    # Extract supplied CSRF token from header, form, or JSON body
     supplied = request.headers.get("X-CSRF-Token") or request.form.get("csrf_token")
+    if not supplied and request.is_json:
+        json_data = request.get_json(silent=True) or {}
+        supplied = json_data.get("csrf_token")
 
     if not secrets.compare_digest(str(supplied or ""), str(expected or "")):
-        if request.path.startswith("/api/") or request.is_json:
+        if request.path.startswith("/api/") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify({"error": "CSRF validation failed.", "code": "CSRF_FAILED"}), 403
         flash("Your form expired. Please try again.")
         fallback = "dashboard" if get_authenticated_user_id() is not None else "login"
@@ -105,7 +110,7 @@ def add_security_headers(response):
 
 @app.errorhandler(404)
 def not_found(e):
-    if request.path.startswith("/api/") or request.is_json:
+    if request.path.startswith("/api/") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"error": "Not found.", "code": "NOT_FOUND"}), 404
     return render_template("404.html"), 404
 
@@ -113,7 +118,7 @@ def not_found(e):
 @app.errorhandler(500)
 def internal_error(e):
     app.logger.exception("Unhandled server error")
-    if request.path.startswith("/api/") or request.is_json:
+    if request.path.startswith("/api/") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"error": "An internal server error occurred.", "code": "INTERNAL_ERROR"}), 500
     return render_template("500.html"), 500
 
@@ -121,7 +126,7 @@ def internal_error(e):
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
     app.logger.exception("Unexpected error")
-    if request.path.startswith("/api/") or request.is_json:
+    if request.path.startswith("/api/") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"error": "An unexpected error occurred.", "code": "UNEXPECTED_ERROR"}), 500
     return render_template("500.html"), 500
 
@@ -131,6 +136,8 @@ def _json_error(message, code, status):
 
 
 def _auth_redirect():
+    if request.path.startswith("/api/") or request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
     return redirect(url_for("login"))
 
 
@@ -154,8 +161,9 @@ def _parse_utc_timestamp(value):
     if not value:
         return None
     try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
+        clean_str = str(value).replace(" ", "T").replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(clean_str)
+    except (ValueError, TypeError):
         return None
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
@@ -198,11 +206,7 @@ def _user_today(user_id=None):
 
 
 def _user_day_utc_bounds(user_id=None, target_date=None):
-    """Return UTC start and end ISO strings representing a user's local day.
-    
-    This ensures queries checking 'today' correctly capture the exact 24-hour UTC span
-    that corresponds to midnight-to-midnight in the user's specific local timezone.
-    """
+    """Return UTC start and end ISO strings representing a user's local day."""
     tz = _get_user_timezone(user_id)
     if target_date is None:
         local_date = datetime.now(tz).date()
@@ -283,35 +287,37 @@ def signup():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
-        terms_accepted = request.form.get("terms_accepted") == "true"
-        tz_name = request.form.get("timezone", "UTC").strip()
+        data = request.get_json(silent=True) if request.is_json else request.form
+        username = str(data.get("username", "")).strip()
+        email = str(data.get("email", "")).strip().lower()
+        password = str(data.get("password", ""))
+        confirm_password = str(data.get("confirm_password", ""))
+        terms_accepted = str(data.get("terms_accepted")).lower() in ("true", "1", "on")
+        tz_name = str(data.get("timezone", "UTC")).strip()
         
         try:
             ZoneInfo(tz_name)
         except ZoneInfoNotFoundError:
             tz_name = "UTC"
 
+        errors = []
         if not username or not email or not password or not confirm_password:
-            flash("Please fill in all fields.")
-            return redirect(url_for("signup"))
-        if len(username) > 50:
-            flash("Username must be 50 characters or fewer.")
-            return redirect(url_for("signup"))
-        if not _email_is_plausible(email):
-            flash("Please enter a valid email address.")
-            return redirect(url_for("signup"))
-        if password != confirm_password:
-            flash("Passwords do not match.")
-            return redirect(url_for("signup"))
-        if not terms_accepted:
-            flash("Please accept the Terms of Service to continue.")
-            return redirect(url_for("signup"))
-        if not _password_is_secure(password):
-            flash("Password must contain 12+ characters, uppercase, lowercase, number, and symbol.")
+            errors.append("Please fill in all fields.")
+        elif len(username) > 50:
+            errors.append("Username must be 50 characters or fewer.")
+        elif not _email_is_plausible(email):
+            errors.append("Please enter a valid email address.")
+        elif password != confirm_password:
+            errors.append("Passwords do not match.")
+        elif not terms_accepted:
+            errors.append("Please accept the Terms of Service to continue.")
+        elif not _password_is_secure(password):
+            errors.append("Password must contain 12+ characters, uppercase, lowercase, number, and symbol.")
+
+        if errors:
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return _json_error(errors[0], "VALIDATION_FAILED", 400)
+            flash(errors[0])
             return redirect(url_for("signup"))
 
         conn = db.get_db()
@@ -323,6 +329,8 @@ def signup():
             conn.commit()
         except Exception:
             conn.rollback()
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return _json_error("Username or email already exists.", "USER_EXISTS", 409)
             flash("Username already exists.")
             return redirect(url_for("signup"))
 
@@ -331,6 +339,10 @@ def signup():
         session["user_id"] = cursor.lastrowid
         session["username"] = username
         session["csrf_token"] = secrets.token_urlsafe(32)
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": True, "redirect": url_for("dashboard")})
+
         return redirect(url_for("dashboard"))
 
     return render_template("signup.html")
@@ -342,13 +354,18 @@ def login():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
+        data = request.get_json(silent=True) if request.is_json else request.form
+        username = str(data.get("username", "")).strip()
+        password = str(data.get("password", ""))
+
         row = db.get_db().execute(
             "SELECT id, username, password_hash FROM users WHERE username = ?",
             (username,),
         ).fetchone()
+
         if not username or not password or not row or not check_password_hash(row["password_hash"], password):
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return _json_error("Invalid username or password.", "INVALID_CREDENTIALS", 401)
             flash("Invalid username or password.")
             return redirect(url_for("login"))
 
@@ -357,6 +374,10 @@ def login():
         session["user_id"] = row["id"]
         session["username"] = row["username"]
         session["csrf_token"] = secrets.token_urlsafe(32)
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": True, "redirect": url_for("dashboard")})
+
         return redirect(url_for("dashboard"))
 
     return render_template("login.html")
@@ -365,6 +386,8 @@ def login():
 @app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "redirect": url_for("login")})
     return redirect(url_for("login"))
 
 
@@ -380,10 +403,13 @@ def settings():
 
     conn = db.get_db()
     if request.method == "POST":
-        action = request.form.get("action")
+        # Support JSON modal requests and standard Form posts
+        data = request.get_json(silent=True) if request.is_json else request.form
+        action = data.get("action")
+
         if action == "save_profile":
-            display_name = request.form.get("display_name", "").strip()[:100]
-            tz_name = request.form.get("timezone", "UTC").strip()
+            display_name = str(data.get("display_name", "")).strip()[:100]
+            tz_name = str(data.get("timezone", "UTC")).strip()
             
             try:
                 ZoneInfo(tz_name)
@@ -395,8 +421,8 @@ def settings():
                 (display_name or None, tz_name, user_id),
             )
         elif action == "save_focus_preferences":
-            focus = _parse_positive_minutes(request.form.get("focus_mins"), 240)
-            break_mins = _parse_positive_minutes(request.form.get("break_mins"), 60)
+            focus = _parse_positive_minutes(data.get("focus_mins"), 240)
+            break_mins = _parse_positive_minutes(data.get("break_mins"), 60)
             if focus is None or break_mins is None:
                 return _json_error("Invalid timer preference.", "INVALID_PREFERENCE", 400)
             conn.execute(
@@ -406,7 +432,7 @@ def settings():
                 (focus, break_mins, user_id),
             )
         elif action == "save_ai_preferences":
-            tone = request.form.get("ai_tone", "balanced")
+            tone = str(data.get("ai_tone", "balanced")).strip().lower()
             if tone not in {"supportive", "balanced", "strict"}:
                 return _json_error("Invalid AI tone.", "INVALID_PREFERENCE", 400)
             conn.execute(
@@ -417,7 +443,12 @@ def settings():
             )
         else:
             return _json_error("Unknown settings action.", "INVALID_ACTION", 400)
+
         conn.commit()
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": True, "message": "Settings saved successfully."})
+
         flash("Settings saved successfully.", "success")
         return redirect(url_for("settings"))
 
@@ -425,8 +456,8 @@ def settings():
     return render_template(
         "settings.html",
         display_name=user["display_name"] or user["username"],
-        default_focus_mins=user["default_focus_mins"] or 25,
-        break_mins=user["break_mins"] or 5,
+        default_focus_mins=user["default_focus_mins"] if user["default_focus_mins"] is not None else 25,
+        break_mins=user["break_mins"] if user["break_mins"] is not None else 5,
         ai_tone=user["ai_tone"] or "balanced",
         user_timezone=user["timezone"] or "UTC",
     )
@@ -542,7 +573,6 @@ def privacy():
     return render_template("privacy.html")
 
 
-
 # ---------------------------------------------------------------------------
 # Focus / Study page
 # ---------------------------------------------------------------------------
@@ -576,26 +606,13 @@ def study():
     )
 
 
-def _parse_utc_timestamp(ts_str):
-    if not ts_str:
-        return None
-    try:
-        clean_str = str(ts_str).replace(" ", "T").replace("Z", "+00:00")
-        dt = datetime.fromisoformat(clean_str)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt
-    except (ValueError, TypeError):
-        return None
-
-
 @app.route("/focus/start", methods=["POST"])
 def start_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = request.get_json(silent=True) or {}
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     mode = str(data.get("mode", "pomodoro")).strip().lower()[:30] or "pomodoro"
     if mode not in ALLOWED_FOCUS_MODES:
         mode = "pomodoro"
@@ -638,7 +655,8 @@ def pause_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    data = request.get_json(silent=True) or {}
+    
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     try:
         session_id = int(data.get("session_id"))
     except (TypeError, ValueError):
@@ -664,7 +682,7 @@ def complete_focus():
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = request.get_json(silent=True) or {}
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     session_id = data.get("session_id")
     note = str(data.get("note", "")).strip()
     if len(note) > 10_000:
@@ -744,12 +762,15 @@ def complete_focus():
         "minutes": elapsed_minutes,
         "message": "Focus session completed successfully.",
     })
+
+
 @app.route("/focus/abandon", methods=["POST"])
 def abandon_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    data = request.get_json(silent=True) or {}
+    
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     try:
         session_id = int(data.get("session_id"))
     except (TypeError, ValueError):
@@ -800,7 +821,8 @@ def save_focus_notes():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    data = request.get_json(silent=True) or {}
+    
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     note = str(data.get("note", ""))
     if len(note) > 10_000:
         return _json_error("Note exceeds maximum length of 10 000 characters.", "NOTE_TOO_LONG", 400)
@@ -827,7 +849,7 @@ def focus_session_note(session_id):
     if request.method == "GET":
         return jsonify({"session_id": session_id, "note": row["note"] or ""})
 
-    data = request.get_json(silent=True) or {}
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     note = str(data.get("note", ""))
     if len(note) > 10_000:
         return _json_error("Note exceeds maximum length of 10 000 characters.", "NOTE_TOO_LONG", 400)
@@ -1068,7 +1090,7 @@ def ai_chat():
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = request.get_json(silent=True) or {}
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
     user_query = str(data.get("query", "")).strip()
     if not user_query:
         return _json_error("Query cannot be empty.", "QUERY_REQUIRED", 400)
@@ -1106,6 +1128,77 @@ def ai_chat():
     except Exception:
         app.logger.exception("AI request failed")
         return _json_error("Terra could not process that request. Please try again.", "AI_ERROR", 500)
+
+
+@app.route("/api/ai/accept_task", methods=["POST"])
+def accept_proposed_task():
+    user_id = get_authenticated_user_id()
+    if user_id is None:
+        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
+
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+    task_data = data.get("proposed_task") or data
+    title = str(task_data.get("title", "")).strip()
+    if not title:
+        return _json_error("Task title is required.", "TITLE_REQUIRED", 400)
+
+    subject = str(task_data.get("subject", "")).strip() or None
+    due_date = str(task_data.get("due_date", "")).strip() or None
+    priority = task_data.get("priority", 2)
+    try:
+        priority = int(priority)
+    except (ValueError, TypeError):
+        priority = 2
+
+    estimated_minutes = task_data.get("estimated_minutes")
+    if estimated_minutes is not None:
+        try:
+            estimated_minutes = int(estimated_minutes)
+        except (ValueError, TypeError):
+            estimated_minutes = None
+
+    conn = db.get_db()
+    cursor = conn.execute(
+        """INSERT INTO planner_tasks (user_id, title, subject, due_date, priority, estimated_minutes)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (user_id, title, subject, due_date, priority, estimated_minutes),
+    )
+    conn.commit()
+
+    return jsonify({"success": True, "task_id": cursor.lastrowid, "message": "Task added successfully from AI response."})
+
+
+@app.route("/api/ai/apply_schedule", methods=["POST"])
+def apply_proposed_schedule():
+    user_id = get_authenticated_user_id()
+    if user_id is None:
+        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
+
+    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+    schedule = data.get("proposed_schedule") or []
+    if not isinstance(schedule, list) or not schedule:
+        return _json_error("Valid schedule blocks are required.", "SCHEDULE_REQUIRED", 400)
+
+    conn = db.get_db()
+    created_events = []
+    for block in schedule:
+        title = str(block.get("title", block.get("activity", "Focus Block"))).strip()
+        start_time = str(block.get("start_time", "")).strip()
+        end_time = str(block.get("end_time", "")).strip()
+        task_id = block.get("task_id")
+
+        if not start_time or not end_time:
+            continue
+
+        cursor = conn.execute(
+            """INSERT INTO events (user_id, title, start_time, end_time, planner_task_id)
+               VALUES (?, ?, ?, ?, ?)""",
+            (user_id, title, start_time, end_time, task_id),
+        )
+        created_events.append(cursor.lastrowid)
+
+    conn.commit()
+    return jsonify({"success": True, "created_events_count": len(created_events), "event_ids": created_events})
 
 
 if __name__ == "__main__":
