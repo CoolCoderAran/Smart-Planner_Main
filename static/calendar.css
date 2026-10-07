@@ -1,27 +1,41 @@
-@import url('hub.css')
+@import url('hub.css');
 
 /* ==========================================================================
-   CALENDAR COMPONENT - USES HUB.CSS MASTER THEME VARIABLES
+   CALENDAR STYLES — LINKED TO HUB.CSS DESIGN SYSTEM
    ========================================================================== */
 
-.calendar-page-wrapper {
-    max-width: 1200px;
+body.calendar-body {
+    background: var(--bg-gradient);
+    color: var(--text-main);
+    min-height: 100vh;
+}
+
+/* Restored non-fullscreen, centered container wrapper */
+.main-content {
+    max-width: 1100px;
     margin: 2rem auto;
     padding: 0 1.5rem;
 }
 
+/* Header & Controls */
 .calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 1rem 1.5rem;
+    background: var(--card-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--card-shadow);
 }
 
 .calendar-nav-controls {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .calendar-nav-controls h2 {
@@ -32,10 +46,29 @@
     text-align: center;
 }
 
-.calendar-container {
-    padding: 1.25rem;
+.calendar-view-picker {
+    display: flex;
+    gap: 0.5rem;
 }
 
+.calendar-view-picker .view-btn.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+}
+
+/* Calendar Card Container */
+.calendar-container {
+    background: var(--card-bg);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow);
+}
+
+/* Weekday Labels */
 .calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -45,9 +78,10 @@
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
+/* Grid Layout */
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -58,29 +92,31 @@
     grid-template-columns: 1fr;
 }
 
+/* Individual Grid Cells */
 .calendar-day {
     background: var(--card-bg-hover);
     border: 1px solid var(--card-border);
-    border-radius: 12px;
-    min-height: 100px;
+    border-radius: 10px;
+    min-height: 95px;
     padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .calendar-day.single-day-view {
-    min-height: 300px;
+    min-height: 280px;
 }
 
 .calendar-day.today {
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent-glow);
+    box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 .calendar-day.empty {
     background: transparent;
     border-color: transparent;
+    box-shadow: none;
 }
 
 .day-header {
@@ -93,13 +129,14 @@
 .day-number {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-sub);
 }
 
+/* Workload Indicator Badges */
 .workload-tag {
     font-size: 0.65rem;
-    padding: 2px 6px;
-    border-radius: 6px;
+    padding: 2px 5px;
+    border-radius: 4px;
     font-weight: 600;
 }
 
@@ -107,27 +144,27 @@
     background: var(--priority-low-bg);
     color: var(--priority-low-text);
 }
-
 .workload-tag.moderate {
     background: var(--priority-med-bg);
     color: var(--priority-med-text);
 }
-
 .workload-tag.heavy {
     background: var(--priority-high-bg);
     color: var(--priority-high-text);
 }
 
+/* Task Badges Inside Cells */
 .day-tasks {
     display: flex;
     flex-direction: column;
     gap: 4px;
     overflow-y: auto;
+    max-height: 80px;
 }
 
 .calendar-task-badge {
-    font-size: 0.75rem;
-    padding: 4px 6px;
+    font-size: 0.72rem;
+    padding: 3px 6px;
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -160,26 +197,43 @@
 
 .calendar-task-badge.completed {
     background: var(--completed);
-    border-left: 3px solid var(--text-muted);
+    border-left-color: var(--text-muted);
     color: var(--text-muted);
     text-decoration: line-through;
     opacity: 0.6;
 }
 
-.modal-close {
-    position: absolute;
-    top: 1rem;
-    right: 1.2rem;
-    background: none;
+/* Task Detail & Add Modal Actions */
+.modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    justify-content: flex-end;
+}
+
+.task-button {
     border: none;
-    color: var(--text-muted);
-    font-size: 1.5rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
     cursor: pointer;
 }
 
-.modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
-    justify-content: flex-end;
+.complete-button {
+    background: var(--priority-low-bg);
+    color: var(--priority-low-text);
+    border: 1px solid var(--priority-low);
+}
+
+.edit-button {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+
+.delete-button {
+    background: var(--priority-high-bg);
+    color: var(--priority-high-text);
+    border: 1px solid var(--priority-high);
 }
