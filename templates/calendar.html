@@ -10,29 +10,29 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='planner.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
 </head>
-<body class="calendar-body">
+<body>
 
     {% include 'navbar.html' %}
 
-    <div class="main-content">
-        <!-- CALENDAR HEADER & NAVIGATION -->
-        <header class="calendar-header">
+    <div class="main-content calendar-page-wrapper">
+        <!-- CALENDAR HEADER & CONTROLS -->
+        <header class="calendar-header glass-card">
             <div class="calendar-nav-controls">
-                <button id="prevMonthBtn" class="nav-btn">&larr; Previous</button>
+                <button id="prevMonthBtn" class="nav-btn glass-btn">&larr; Previous</button>
                 <h2 id="currentMonthYearDisplay"></h2>
-                <button id="nextMonthBtn" class="nav-btn">Next &rarr;</button>
-                <button id="todayBtn" class="today-btn">Today</button>
+                <button id="nextMonthBtn" class="nav-btn glass-btn">Next &rarr;</button>
+                <button id="todayBtn" class="today-btn glass-btn">Today</button>
             </div>
             
             <div class="calendar-view-picker">
-                <button class="view-btn active" data-view="month">Month</button>
-                <button class="view-btn" data-view="week">Week</button>
-                <button class="view-btn" data-view="day">Day</button>
+                <button class="view-btn glass-btn active" data-view="month">Month</button>
+                <button class="view-btn glass-btn" data-view="week">Week</button>
+                <button class="view-btn glass-btn" data-view="day">Day</button>
             </div>
         </header>
 
         <!-- CALENDAR GRID CONTAINER -->
-        <main class="calendar-container">
+        <main class="calendar-container glass-card">
             <div class="calendar-weekdays">
                 <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
             </div>
@@ -41,7 +41,7 @@
     </div>
 
     <!-- Calendar Task Details Modal -->
-    <div id="calendarTaskModal" class="modal-overlay" style="display:none;">
+    <div id="calendarTaskModal" class="modal-overlay">
       <div class="modal-content glass-card">
         <button class="modal-close" onclick="closeCalendarModal()">&times;</button>
         <h3 id="calModalTitle">Task Details</h3>
@@ -52,36 +52,36 @@
         <p><strong>Status:</strong> <span id="calModalStatus"></span></p>
         
         <div class="modal-actions">
-            <button id="calToggleBtn" class="task-button complete-button">Toggle Complete</button>
-            <button id="calEditBtn" class="task-button edit-button">Edit</button>
-            <button id="calDeleteBtn" class="task-button delete-button">Delete</button>
+            <button id="calToggleBtn" class="glass-btn">Toggle Complete</button>
+            <button id="calEditBtn" class="glass-btn primary">Edit</button>
+            <button id="calDeleteBtn" class="glass-btn danger">Delete</button>
         </div>
       </div>
     </div>
 
-    <!-- Edit Task Modal (Needed by editTask in planner.js) -->
-    <div id="taskModal" class="modal-overlay" style="display:none;">
+    <!-- Edit/Add Task Modal (Matches backend endpoint inputs exactly) -->
+    <div id="taskModal" class="modal-overlay">
         <div class="modal-content glass-card">
             <button class="modal-close" onclick="closeModal()">&times;</button>
             <h3 id="modalHeaderTitle">Task Details</h3>
             <form id="addTaskForm">
-                <input type="hidden" id="modalTaskId">
+                <input type="hidden" id="modalTaskId" name="id">
                 <div class="form-group">
                     <label for="modalTaskName">Task Title</label>
-                    <input type="text" id="modalTaskName" class="glass-input" required>
+                    <input type="text" id="modalTaskName" name="title" class="glass-input" required>
                 </div>
                 <div class="form-group">
                     <label for="modalSubject">Subject</label>
-                    <input type="text" id="modalSubject" class="glass-input" required>
+                    <input type="text" id="modalSubject" name="subject" class="glass-input">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="modalEstMinutes">Est. Minutes</label>
-                        <input type="number" id="modalEstMinutes" class="glass-input" value="30">
+                        <input type="number" id="modalEstMinutes" name="estimated_minutes" class="glass-input" value="30">
                     </div>
                     <div class="form-group">
                         <label for="modalPriority">Priority</label>
-                        <select id="modalPriority" class="glass-input">
+                        <select id="modalPriority" name="priority" class="glass-input">
                             <option value="Low">Low</option>
                             <option value="Medium" selected>Medium</option>
                             <option value="High">High</option>
@@ -90,7 +90,7 @@
                 </div>
                 <div class="form-group">
                     <label for="modalDueDate">Due Date</label>
-                    <input type="date" id="modalDueDate" class="glass-input">
+                    <input type="date" id="modalDueDate" name="due_date" class="glass-input">
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel glass-btn" onclick="closeModal()">Cancel</button>
@@ -100,7 +100,7 @@
         </div>
     </div>
 
-    <!-- Safe Variable Embedding & Script Load -->
+    <!-- Safe Variable Embedding -->
     <script>
         const rawTasksData = {{ (tasks if tasks is defined else []) | tojson | safe }};
         const serverToday = {{ (today_date if today_date is defined else '') | tojson | safe }};
