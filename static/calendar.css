@@ -1,23 +1,13 @@
 @import url('hub.css');
 
-/* ==========================================================================
-   CALENDAR STYLES — LINKED TO HUB.CSS DESIGN SYSTEM
-   ========================================================================== */
-
-body.calendar-body {
-    background: var(--bg-gradient);
-    color: var(--text-main);
-    min-height: 100vh;
-}
-
-/* Restored non-fullscreen, centered container wrapper */
+/* Main Container — Boxed Layout */
 .main-content {
     max-width: 1100px;
     margin: 2rem auto;
     padding: 0 1.5rem;
 }
 
-/* Header & Controls */
+/* Header Controls */
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -35,29 +25,27 @@ body.calendar-body {
 .calendar-nav-controls {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .calendar-nav-controls h2 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: var(--text-title);
-    min-width: 180px;
+    min-width: 170px;
     text-align: center;
 }
 
-.calendar-view-picker {
+.gcal-sync-btn {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid var(--accent);
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 6px;
 }
 
-.calendar-view-picker .view-btn.active {
-    background: var(--accent);
-    color: #ffffff;
-    border-color: var(--accent);
-}
-
-/* Calendar Card Container */
+/* Grid Box */
 .calendar-container {
     background: var(--card-bg);
     backdrop-filter: var(--backdrop-blur);
@@ -68,7 +56,6 @@ body.calendar-body {
     box-shadow: var(--card-shadow);
 }
 
-/* Weekday Labels */
 .calendar-weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -81,18 +68,13 @@ body.calendar-body {
     margin-bottom: 0.5rem;
 }
 
-/* Grid Layout */
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 8px;
 }
 
-.calendar-grid.view-day {
-    grid-template-columns: 1fr;
-}
-
-/* Individual Grid Cells */
+/* Individual Cell Styling using hub.css variables */
 .calendar-day {
     background: var(--card-bg-hover);
     border: 1px solid var(--card-border);
@@ -104,8 +86,9 @@ body.calendar-body {
     transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.calendar-day.single-day-view {
-    min-height: 280px;
+.calendar-day.drag-over {
+    border: 2px dashed var(--accent);
+    background: var(--accent-glow);
 }
 
 .calendar-day.today {
@@ -139,21 +122,11 @@ body.calendar-body {
     border-radius: 4px;
     font-weight: 600;
 }
+.workload-tag.light { background: var(--priority-low-bg); color: var(--priority-low-text); }
+.workload-tag.moderate { background: var(--priority-med-bg); color: var(--priority-med-text); }
+.workload-tag.heavy { background: var(--priority-high-bg); color: var(--priority-high-text); }
 
-.workload-tag.light {
-    background: var(--priority-low-bg);
-    color: var(--priority-low-text);
-}
-.workload-tag.moderate {
-    background: var(--priority-med-bg);
-    color: var(--priority-med-text);
-}
-.workload-tag.heavy {
-    background: var(--priority-high-bg);
-    color: var(--priority-high-text);
-}
-
-/* Task Badges Inside Cells */
+/* Draggable Task Badges linked to hub.css Priorities */
 .day-tasks {
     display: flex;
     flex-direction: column;
@@ -164,17 +137,18 @@ body.calendar-body {
 
 .calendar-task-badge {
     font-size: 0.72rem;
-    padding: 3px 6px;
+    padding: 4px 6px;
     border-radius: 6px;
-    cursor: pointer;
+    cursor: grab;
     display: flex;
     justify-content: space-between;
     align-items: center;
     transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.calendar-task-badge:hover {
-    transform: translateY(-1px);
+.calendar-task-badge:active {
+    cursor: grabbing;
+    opacity: 0.5;
 }
 
 .calendar-task-badge.priority-high {
@@ -201,39 +175,4 @@ body.calendar-body {
     color: var(--text-muted);
     text-decoration: line-through;
     opacity: 0.6;
-}
-
-/* Task Detail & Add Modal Actions */
-.modal-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1.25rem;
-    justify-content: flex-end;
-}
-
-.task-button {
-    border: none;
-    padding: 0.5rem 0.85rem;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-
-.complete-button {
-    background: var(--priority-low-bg);
-    color: var(--priority-low-text);
-    border: 1px solid var(--priority-low);
-}
-
-.edit-button {
-    background: var(--accent-glow);
-    color: var(--accent);
-    border: 1px solid var(--accent);
-}
-
-.delete-button {
-    background: var(--priority-high-bg);
-    color: var(--priority-high-text);
-    border: 1px solid var(--priority-high);
 }
