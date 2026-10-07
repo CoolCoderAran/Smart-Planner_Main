@@ -1,4 +1,4 @@
-let currentView = "month"; // "month" | "week" | "day"
+let currentView = "month";
 let currentDate = new Date();
 
 if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined" && currentYear && currentMonth) {
@@ -8,7 +8,6 @@ if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined" &&
 document.addEventListener("DOMContentLoaded", function () {
     updateCalendarView();
 
-    // View Switching Listeners
     const viewBtns = document.querySelectorAll(".view-btn");
     viewBtns.forEach(btn => {
         btn.addEventListener("click", function () {
@@ -19,26 +18,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Navigation Controls
     document.getElementById("prevMonthBtn")?.addEventListener("click", () => {
-        if (currentView === "month") {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-        } else if (currentView === "week") {
-            currentDate.setDate(currentDate.getDate() - 7);
-        } else if (currentView === "day") {
-            currentDate.setDate(currentDate.getDate() - 1);
-        }
+        if (currentView === "month") currentDate.setMonth(currentDate.getMonth() - 1);
+        else if (currentView === "week") currentDate.setDate(currentDate.getDate() - 7);
+        else if (currentView === "day") currentDate.setDate(currentDate.getDate() - 1);
         updateCalendarView();
     });
 
     document.getElementById("nextMonthBtn")?.addEventListener("click", () => {
-        if (currentView === "month") {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-        } else if (currentView === "week") {
-            currentDate.setDate(currentDate.getDate() + 7);
-        } else if (currentView === "day") {
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
+        if (currentView === "month") currentDate.setMonth(currentDate.getMonth() + 1);
+        else if (currentView === "week") currentDate.setDate(currentDate.getDate() + 7);
+        else if (currentView === "day") currentDate.setDate(currentDate.getDate() + 1);
         updateCalendarView();
     });
 
@@ -56,13 +46,9 @@ function updateCalendarView() {
     grid.innerHTML = "";
     grid.className = `calendar-grid view-${currentView}`;
 
-    if (currentView === "month") {
-        renderMonthView(grid, display);
-    } else if (currentView === "week") {
-        renderWeekView(grid, display);
-    } else if (currentView === "day") {
-        renderDayView(grid, display);
-    }
+    if (currentView === "month") renderMonthView(grid, display);
+    else if (currentView === "week") renderWeekView(grid, display);
+    else if (currentView === "day") renderDayView(grid, display);
 }
 
 function formatDateISO(d) {
@@ -72,7 +58,6 @@ function formatDateISO(d) {
     return `${year}-${month}-${day}`;
 }
 
-// Render Month
 function renderMonthView(grid, display) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -92,16 +77,13 @@ function renderMonthView(grid, display) {
 
     for (let day = 1; day <= daysInMonth; day++) {
         const dayDate = new Date(year, month, day);
-        const dateISO = formatDateISO(dayDate);
-        grid.appendChild(createDayCell(day, dateISO));
+        grid.appendChild(createDayCell(day, formatDateISO(dayDate)));
     }
 }
 
-// Render Week
 function renderWeekView(grid, display) {
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
 
@@ -116,19 +98,16 @@ function renderWeekView(grid, display) {
     }
 }
 
-// Render Day
 function renderDayView(grid, display) {
     const dateISO = formatDateISO(currentDate);
     if (display) {
         display.textContent = currentDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     }
-
     const dayCell = createDayCell(currentDate.getDate(), dateISO, true);
     dayCell.classList.add("single-day-view");
     grid.appendChild(dayCell);
 }
 
-// Reusable Cell Creator with Workload Indicators & Interactive Task Badges
 function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
     const dayCell = document.createElement("div");
     dayCell.classList.add("calendar-day");
@@ -138,8 +117,7 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
     let headerHTML = `<span class="day-number">${dayNumber}</span>`;
     if (showWeekdayLabel) {
         const d = new Date(dateISO + "T00:00:00");
-        const weekday = d.toLocaleDateString('default', { weekday: 'short' });
-        headerHTML = `<span class="weekday-label">${weekday}</span> ` + headerHTML;
+        headerHTML = `<span class="weekday-label">${d.toLocaleDateString('default', { weekday: 'short' })}</span> ` + headerHTML;
     }
 
     const matchingTasks = (typeof rawTasksData !== "undefined" ? rawTasksData : []).filter(t => {
@@ -172,7 +150,6 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
         
         taskBadge.className = `calendar-task-badge priority-${(task.priority || 'medium').toLowerCase()}`;
         if (task.completed) taskBadge.classList.add("completed");
-        if (isOverdue) taskBadge.classList.add("overdue");
 
         taskBadge.innerHTML = `
             <span class="badge-title">${isOverdue ? '⚠️ ' : ''}${task.title}</span>
@@ -187,7 +164,7 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
         tasksContainer.appendChild(taskBadge);
     });
 
-    // Double click to open task creation modal with date prefilled
+    // Ensures due_date passed to modal is valid YYYY-MM-DD format for /planner/add
     dayCell.addEventListener("dblclick", () => {
         if (typeof openModal === "function") {
             const dueInput = document.getElementById("modalDueDate");
@@ -199,14 +176,15 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
     return dayCell;
 }
 
-// Modal inspection helper for individual tasks on the grid
 function openCalendarTaskModal(task) {
     const modal = document.getElementById("calendarTaskModal");
     if (!modal) return;
 
+    const formattedDate = task.due_date ? task.due_date.split('T')[0] : "";
+
     document.getElementById("calModalTitle").textContent = task.title;
     document.getElementById("calModalSubject").textContent = task.subject || "General";
-    document.getElementById("calModalDueDate").textContent = task.due_date ? task.due_date.split('T')[0] : "None";
+    document.getElementById("calModalDueDate").textContent = formattedDate || "None";
     document.getElementById("calModalPriority").textContent = task.priority || "Medium";
     document.getElementById("calModalEst").textContent = task.estimated_minutes || 30;
     document.getElementById("calModalStatus").textContent = task.completed ? "Completed" : "Pending";
@@ -219,7 +197,7 @@ function openCalendarTaskModal(task) {
         editBtn.onclick = () => {
             closeCalendarModal();
             if (typeof editTask === "function") {
-                editTask(task.id, task.title, task.subject, task.estimated_minutes, task.priority, task.due_date);
+                editTask(task.id, task.title, task.subject, task.estimated_minutes, task.priority, formattedDate);
             }
         };
     }
