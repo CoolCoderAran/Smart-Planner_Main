@@ -1,347 +1,253 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const calendarEl = document.getElementById("calendar");
-    const modal = document.getElementById("eventModal");
-    const form = document.getElementById("eventForm");
-    const eventId = document.getElementById("eventId");
-    const titleInput = document.getElementById("eventTitleInput");
-    const startInput = document.getElementById("eventStartInput");
-    const endInput = document.getElementById("eventEndInput");
-    const allDayInput = document.getElementById("eventAllDayInput");
-    const categoryInput = document.getElementById("eventCategoryInput");
-    const locationInput = document.getElementById("eventLocationInput");
-    const descriptionInput = document.getElementById("eventDescriptionInput");
-    const deleteBtn = document.getElementById("deleteEventBtn");
-    const modalTitle = document.getElementById("modalTitle");
-    const externalEventsList = document.getElementById("external-events");
-    const emptyQueueMsg = document.getElementById("emptyQueueMsg");
-    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+let currentView = "month"; // "month" | "week" | "day"
+let currentDate = new Date();
 
-    if (!calendarEl || !form) return;
+if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined" && currentYear && currentMonth) {
+    currentDate = new Date(currentYear, currentMonth - 1, 1);
+}
 
-    const requestOptions = (method, body) => ({
-        method,
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": csrf,
-            "X-Requested-With": "XMLHttpRequest"
-        },
-        body: body !== undefined ? JSON.stringify(body) : undefined
-    });
+document.addEventListener("DOMContentLoaded", function () {
+    updateCalendarView();
 
-    const toInputValue = value => {
-        if (!value) return "";
-        // Accept both "YYYY-MM-DD" (all-day) and full ISO datetimes.
-        return value.length === 10 ? `${value}T00:00` : value.slice(0, 16);
-    };
-
-    function toast(message, isError = false) {
-        const el = document.createElement("div");
-        el.className = `calendar-toast${isError ? " error" : ""}`;
-        el.textContent = message;
-        document.body.appendChild(el);
-        requestAnimationFrame(() => el.classList.add("show"));
-        setTimeout(() => {
-            el.classList.remove("show");
-            setTimeout(() => el.remove(), 300);
-        }, 3500);
-    }
-
-    // ---------------------------------------------------------------
-    // FullCalendar setup
-    // ---------------------------------------------------------------
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: "dayGridMonth",
-        height: "auto",
-        selectable: true,
-        editable: true,
-        droppable: true,
-        eventStartEditable: info => info.event.extendedProps.entity_type === "event",
-        eventDurationEditable: info => info.event.extendedProps.entity_type === "event",
-        events: async (info, success, failure) => {
-            try {
-                const response = await fetch(
-                    `/api/calendar/feed?start=${encodeURIComponent(info.startStr)}&end=${encodeURIComponent(info.endStr)}`
-                );
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "Unable to load calendar.");
-                success((data.feed || []).map(item => ({
-                    id: `${item.entity_type}:${item.id}`,
-                    title: `${item.entity_type === "task" ? "⏰ Due: " : "📅 "}${item.title}`,
-                    start: item.start_time,
-                    end: item.end_time,
-                    allDay: Boolean(item.is_all_day),
-                    startEditable: item.entity_type === "event",
-                    durationEditable: item.entity_type === "event",
-                    extendedProps: item
-                })));
-            } catch (error) {
-                console.error(error);
-                failure(error);
-            }
-        },
-        select: info => {
-            openCreateModal(info.startStr, info.endStr, info.allDay);
-        },
-        eventClick: info => {
-            const item = info.event.extendedProps;
-            if (item.entity_type === "task") {
-                window.location.href = "/planner";
-                return;
-            }
-            openEditModal(item);
-        },
-
-        // Dragging a task card in from the sidebar queue.
-        eventReceive: async info => {
-            const taskId = info.event.extendedProps.taskId;
-            const start = info.event.start;
-            const end = info.event.end || new Date(start.getTime() + 30 * 60000);
-            info.event.remove(); // remove FullCalendar's placeholder; the feed is the source of truth
-
-            try {
-                const response = await fetch("/api/calendar/events/add", requestOptions("POST", {
-                    title: info.draggedEl?.dataset?.title || "Scheduled Task",
-                    start_time: toLocalIso(start),
-                    end_time: toLocalIso(end),
-                    category: info.draggedEl?.dataset?.subject || "General",
-                    description: "",
-                    location: "",
-                    is_all_day: false,
-                    task_id: taskId
-                }));
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "Unable to schedule task.");
-
-                const cardEl = externalEventsList.querySelector(`[data-id="${taskId}"]`);
-                if (cardEl) cardEl.remove();
-                updateEmptyQueueState();
-
-                calendar.refetchEvents();
-                toast("Task scheduled on your calendar.");
-            } catch (error) {
-                toast(error.message, true);
-            }
-        },
-
-        // Dragging an existing event to a new time.
-        eventDrop: async info => {
-            if (info.event.extendedProps.entity_type !== "event") { info.revert(); return; }
-            const ok = await persistEventTimes(info.event);
-            if (!ok) info.revert();
-        },
-
-        // Resizing an existing event's duration.
-        eventResize: async info => {
-            if (info.event.extendedProps.entity_type !== "event") { info.revert(); return; }
-            const ok = await persistEventTimes(info.event);
-            if (!ok) info.revert();
-        }
-    });
-
-    function toLocalIso(date) {
-        const pad = n => String(n).padStart(2, "0");
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
-
-    async function persistEventTimes(event) {
-        const props = event.extendedProps;
-        const rawId = String(event.id).split(":")[1];
-        const start = event.start;
-        const end = event.end || new Date(start.getTime() + 30 * 60000);
-        try {
-            const response = await fetch(`/api/calendar/events/update/${encodeURIComponent(rawId)}`, requestOptions("POST", {
-                title: props.title,
-                description: props.description || "",
-                location: props.location || "",
-                category: props.category || "General",
-                start_time: event.allDay ? start.toISOString().slice(0, 10) : toLocalIso(start),
-                end_time: event.allDay ? end.toISOString().slice(0, 10) : toLocalIso(end),
-                is_all_day: event.allDay
-            }));
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Unable to move event.");
-            toast("Event updated.");
-            return true;
-        } catch (error) {
-            toast(error.message, true);
-            return false;
-        }
-    }
-
-    function updateEmptyQueueState() {
-        if (!emptyQueueMsg) return;
-        const hasCards = externalEventsList.querySelector(".glass-draggable-task") !== null;
-        emptyQueueMsg.style.display = hasCards ? "none" : "";
-    }
-
-    // Make Planner task cards in the sidebar draggable onto the calendar.
-    if (externalEventsList) {
-        new FullCalendar.Draggable(externalEventsList, {
-            itemSelector: ".glass-draggable-task",
-            eventData: el => ({
-                title: el.dataset.title,
-                duration: { minutes: parseInt(el.dataset.duration, 10) || 30 },
-                extendedProps: { taskId: el.dataset.id }
-            })
+    // View Switching Listeners
+    const viewBtns = document.querySelectorAll(".view-btn");
+    viewBtns.forEach(btn => {
+        btn.addEventListener("click", function () {
+            viewBtns.forEach(b => b.classList.remove("active"));
+            this.classList.add("active");
+            currentView = this.dataset.view;
+            updateCalendarView();
         });
+    });
+
+    // Navigation Controls
+    document.getElementById("prevMonthBtn")?.addEventListener("click", () => {
+        if (currentView === "month") {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+        } else if (currentView === "week") {
+            currentDate.setDate(currentDate.getDate() - 7);
+        } else if (currentView === "day") {
+            currentDate.setDate(currentDate.getDate() - 1);
+        }
+        updateCalendarView();
+    });
+
+    document.getElementById("nextMonthBtn")?.addEventListener("click", () => {
+        if (currentView === "month") {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        } else if (currentView === "week") {
+            currentDate.setDate(currentDate.getDate() + 7);
+        } else if (currentView === "day") {
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        updateCalendarView();
+    });
+
+    document.getElementById("todayBtn")?.addEventListener("click", () => {
+        currentDate = new Date();
+        updateCalendarView();
+    });
+});
+
+function updateCalendarView() {
+    const grid = document.getElementById("calendarGrid");
+    const display = document.getElementById("currentMonthYearDisplay");
+    if (!grid) return;
+
+    grid.innerHTML = "";
+    grid.className = `calendar-grid view-${currentView}`;
+
+    if (currentView === "month") {
+        renderMonthView(grid, display);
+    } else if (currentView === "week") {
+        renderWeekView(grid, display);
+    } else if (currentView === "day") {
+        renderDayView(grid, display);
+    }
+}
+
+function formatDateISO(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Render Month
+function renderMonthView(grid, display) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                        "July", "August", "September", "October", "November", "December"];
+    
+    if (display) display.textContent = `${monthNames[month]} ${year}`;
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDayIndex; i++) {
+        const emptyCell = document.createElement("div");
+        emptyCell.classList.add("calendar-day", "empty");
+        grid.appendChild(emptyCell);
     }
 
-    // ---------------------------------------------------------------
-    // Modal handling
-    // ---------------------------------------------------------------
-    function openCreateModal(start = "", end = "", isAllDay = false) {
-        modalTitle.textContent = "Schedule Event";
-        form.reset();
-        eventId.value = "";
-        titleInput.value = "";
-        allDayInput.checked = Boolean(isAllDay);
-        startInput.value = toInputValue(start);
-        endInput.value = toInputValue(end || start);
-        categoryInput.value = "";
-        locationInput.value = "";
-        descriptionInput.value = "";
-        deleteBtn.style.display = "none";
-        modal.style.display = "flex";
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(year, month, day);
+        const dateISO = formatDateISO(dayDate);
+        grid.appendChild(createDayCell(day, dateISO));
+    }
+}
+
+// Render Week
+function renderWeekView(grid, display) {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    if (display) {
+        display.textContent = `${startOfWeek.toLocaleDateString('default', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}`;
     }
 
-    function openEditModal(item) {
-        modalTitle.textContent = "Edit Event";
-        eventId.value = item.id;
-        titleInput.value = item.title || "";
-        allDayInput.checked = Boolean(item.is_all_day);
-        startInput.value = toInputValue(item.start_time);
-        endInput.value = toInputValue(item.end_time);
-        categoryInput.value = item.category || "";
-        locationInput.value = item.location || "";
-        descriptionInput.value = item.description || "";
-        deleteBtn.style.display = "inline-flex";
-        modal.style.display = "flex";
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startOfWeek);
+        dayDate.setDate(startOfWeek.getDate() + i);
+        grid.appendChild(createDayCell(dayDate.getDate(), formatDateISO(dayDate), true));
+    }
+}
+
+// Render Day
+function renderDayView(grid, display) {
+    const dateISO = formatDateISO(currentDate);
+    if (display) {
+        display.textContent = currentDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     }
 
-    window.closeEventModal = () => {
-        modal.style.display = "none";
-        form.reset();
-        eventId.value = "";
-    };
+    const dayCell = createDayCell(currentDate.getDate(), dateISO, true);
+    dayCell.classList.add("single-day-view");
+    grid.appendChild(dayCell);
+}
 
-    form.addEventListener("submit", async event => {
-        event.preventDefault();
-        const id = eventId.value;
-        const isAllDay = allDayInput.checked;
-        const payload = {
-            title: titleInput.value.trim(),
-            start_time: isAllDay ? startInput.value.slice(0, 10) : startInput.value,
-            end_time: isAllDay ? endInput.value.slice(0, 10) : endInput.value,
-            description: descriptionInput.value.trim(),
-            location: locationInput.value.trim(),
-            category: categoryInput.value.trim() || "General",
-            is_all_day: isAllDay
-        };
+// Reusable Cell Creator with Workload Indicators & Interactive Task Badges
+function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
+    const dayCell = document.createElement("div");
+    dayCell.classList.add("calendar-day");
+    dayCell.dataset.date = dateISO;
+    if (dateISO === serverToday) dayCell.classList.add("today");
 
-        const url = id
-            ? `/api/calendar/events/update/${encodeURIComponent(id)}`
-            : "/api/calendar/events/add";
+    let headerHTML = `<span class="day-number">${dayNumber}</span>`;
+    if (showWeekdayLabel) {
+        const d = new Date(dateISO + "T00:00:00");
+        const weekday = d.toLocaleDateString('default', { weekday: 'short' });
+        headerHTML = `<span class="weekday-label">${weekday}</span> ` + headerHTML;
+    }
 
-        try {
-            const response = await fetch(url, requestOptions("POST", payload));
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Unable to save event.");
-            window.closeEventModal();
-            calendar.refetchEvents();
-        } catch (error) {
-            toast(error.message, true);
+    const matchingTasks = (typeof rawTasksData !== "undefined" ? rawTasksData : []).filter(t => {
+        if (!t.due_date) return false;
+        return t.due_date.split('T')[0] === dateISO;
+    });
+
+    const pendingTasks = matchingTasks.filter(t => !t.completed);
+    const totalMinutes = pendingTasks.reduce((acc, t) => acc + (parseInt(t.estimated_minutes) || 0), 0);
+
+    let workloadHTML = "";
+    if (totalMinutes > 0) {
+        const loadClass = totalMinutes > 120 ? "heavy" : (totalMinutes > 60 ? "moderate" : "light");
+        workloadHTML = `<span class="workload-tag ${loadClass}">${totalMinutes}m</span>`;
+    }
+
+    dayCell.innerHTML = `
+        <div class="day-header">
+            ${headerHTML}
+            ${workloadHTML}
+        </div>
+        <div class="day-tasks"></div>
+    `;
+
+    const tasksContainer = dayCell.querySelector(".day-tasks");
+
+    matchingTasks.forEach(task => {
+        const taskBadge = document.createElement("div");
+        const isOverdue = !task.completed && dateISO < serverToday;
+        
+        taskBadge.className = `calendar-task-badge priority-${(task.priority || 'medium').toLowerCase()}`;
+        if (task.completed) taskBadge.classList.add("completed");
+        if (isOverdue) taskBadge.classList.add("overdue");
+
+        taskBadge.innerHTML = `
+            <span class="badge-title">${isOverdue ? '⚠️ ' : ''}${task.title}</span>
+            <span class="badge-time">${task.estimated_minutes || 30}m</span>
+        `;
+        
+        taskBadge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openCalendarTaskModal(task);
+        });
+
+        tasksContainer.appendChild(taskBadge);
+    });
+
+    // Double click to open task creation modal with date prefilled
+    dayCell.addEventListener("dblclick", () => {
+        if (typeof openModal === "function") {
+            const dueInput = document.getElementById("modalDueDate");
+            if (dueInput) dueInput.value = dateISO;
+            openModal();
         }
     });
 
-    window.deleteCurrentEvent = async () => {
-        const id = eventId.value;
-        if (!id || !confirm("Delete this event?")) return;
+    return dayCell;
+}
 
-        try {
-            const response = await fetch(
-                `/api/calendar/events/delete/${encodeURIComponent(id)}`,
-                requestOptions("DELETE")
-            );
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Unable to delete event.");
-            window.closeEventModal();
-            calendar.refetchEvents();
-        } catch (error) {
-            toast(error.message, true);
-        }
-    };
+// Modal inspection helper for individual tasks on the grid
+function openCalendarTaskModal(task) {
+    const modal = document.getElementById("calendarTaskModal");
+    if (!modal) return;
 
-    calendar.render();
-    updateEmptyQueueState();
+    document.getElementById("calModalTitle").textContent = task.title;
+    document.getElementById("calModalSubject").textContent = task.subject || "General";
+    document.getElementById("calModalDueDate").textContent = task.due_date ? task.due_date.split('T')[0] : "None";
+    document.getElementById("calModalPriority").textContent = task.priority || "Medium";
+    document.getElementById("calModalEst").textContent = task.estimated_minutes || 30;
+    document.getElementById("calModalStatus").textContent = task.completed ? "Completed" : "Pending";
 
-    // ---------------------------------------------------------------
-    // Google Calendar sync
-    // ---------------------------------------------------------------
-    const gcalStatusText = document.getElementById("gcalStatusText");
-    const gcalActionBtn = document.getElementById("gcalActionBtn");
-    let gcalState = { configured: false, connected: false };
+    const editBtn = document.getElementById("calEditBtn");
+    const toggleBtn = document.getElementById("calToggleBtn");
+    const deleteBtn = document.getElementById("calDeleteBtn");
 
-    async function refreshGcalStatus() {
-        try {
-            const response = await fetch("/api/calendar/google/status");
-            const data = await response.json();
-            gcalState = data;
-        } catch (error) {
-            gcalState = { configured: false, connected: false };
-        }
-        renderGcalButton();
+    if (editBtn) {
+        editBtn.onclick = () => {
+            closeCalendarModal();
+            if (typeof editTask === "function") {
+                editTask(task.id, task.title, task.subject, task.estimated_minutes, task.priority, task.due_date);
+            }
+        };
     }
 
-    function renderGcalButton() {
-        if (!gcalStatusText || !gcalActionBtn) return;
-        if (!gcalState.configured) {
-            gcalStatusText.textContent = "Google Calendar sync isn't set up on this server yet.";
-            gcalActionBtn.textContent = "Not Available";
-            gcalActionBtn.disabled = true;
-            return;
-        }
-        gcalActionBtn.disabled = false;
-        if (gcalState.connected) {
-            gcalStatusText.textContent = gcalState.last_synced_at
-                ? `Connected. Last synced ${new Date(gcalState.last_synced_at).toLocaleString()}.`
-                : "Connected. Not synced yet.";
-            gcalActionBtn.textContent = "Sync Now";
-        } else {
-            gcalStatusText.textContent = "Connect your Google account to sync events both ways.";
-            gcalActionBtn.textContent = "Connect Google Calendar";
-        }
+    if (toggleBtn) {
+        toggleBtn.onclick = async () => {
+            if (typeof toggleTask === "function") {
+                await toggleTask(task.id);
+                closeCalendarModal();
+                window.location.reload();
+            }
+        };
     }
 
-    window.handleGcalAction = async () => {
-        if (!gcalState.configured) return;
-        if (!gcalState.connected) {
-            window.location.href = "/api/calendar/google/connect";
-            return;
-        }
-        gcalActionBtn.disabled = true;
-        gcalActionBtn.textContent = "Syncing…";
-        try {
-            const response = await fetch("/api/calendar/google/sync", requestOptions("POST"));
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Sync failed.");
-            toast(data.message || "Synced with Google Calendar.");
-            calendar.refetchEvents();
-        } catch (error) {
-            toast(error.message, true);
-        } finally {
-            await refreshGcalStatus();
-        }
-    };
-
-    // Show a toast for the OAuth callback redirect, then clean the URL.
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("gcal_connected")) {
-        toast("Google Calendar connected.");
-        window.history.replaceState({}, "", window.location.pathname);
-    } else if (params.has("gcal_error")) {
-        toast("Google Calendar connection failed. Please try again.", true);
-        window.history.replaceState({}, "", window.location.pathname);
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            if (typeof deleteTask === "function") {
+                await deleteTask(task.id);
+                closeCalendarModal();
+                window.location.reload();
+            }
+        };
     }
 
-    refreshGcalStatus();
-});
+    modal.style.display = "flex";
+}
+
+function closeCalendarModal() {
+    const modal = document.getElementById("calendarTaskModal");
+    if (modal) modal.style.display = "none";
+}
