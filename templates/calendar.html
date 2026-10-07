@@ -16,20 +16,27 @@
 
     <div class="main-content calendar-page-wrapper">
         <!-- CALENDAR HEADER & CONTROLS -->
-        <header class="calendar-header glass-card">
-            <div class="calendar-nav-controls">
-                <button id="prevMonthBtn" class="nav-btn glass-btn">&larr; Previous</button>
-                <h2 id="currentMonthYearDisplay"></h2>
-                <button id="nextMonthBtn" class="nav-btn glass-btn">Next &rarr;</button>
-                <button id="todayBtn" class="today-btn glass-btn">Today</button>
-            </div>
-            
-            <div class="calendar-view-picker">
-                <button class="view-btn glass-btn active" data-view="month">Month</button>
-                <button class="view-btn glass-btn" data-view="week">Week</button>
-                <button class="view-btn glass-btn" data-view="day">Day</button>
-            </div>
-        </header>
+        <header class="calendar-header">
+    <div class="calendar-nav-controls">
+        <button id="prevMonthBtn" class="nav-btn">&larr; Previous</button>
+        <h2 id="currentMonthYearDisplay"></h2>
+        <button id="nextMonthBtn" class="nav-btn">Next &rarr;</button>
+        <button id="todayBtn" class="today-btn">Today</button>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <button id="gcalSyncBtn" class="glass-btn gcal-sync-btn">
+            📅 Sync Google Calendar
+        </button>
+        <div class="calendar-view-picker">
+            <button class="view-btn active" data-view="month">Month</button>
+            <button class="view-btn" data-view="week">Week</button>
+            <button class="view-btn" data-view="day">Day</button>
+        </div>
+    </div>
+</header>
+        
+
 
         <!-- CALENDAR GRID CONTAINER -->
         <main class="calendar-container glass-card">
