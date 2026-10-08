@@ -1324,40 +1324,75 @@ def ai_chat():
 @app.route("/api/ai/accept_task", methods=["POST"])
 def accept_proposed_task():
     user_id = get_authenticated_user_id()
+
     if user_id is None:
-        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
+        return _json_error(
+            "Unauthorized access.",
+            "AUTH_REQUIRED",
+            401,
+        )
 
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
     task_data = data.get("proposed_task") or data
-    title = str(task_data.get("title", "")).strip()
-    if not title:
-        return _json_error("Task title is required.", "TITLE_REQUIRED", 400)
 
-    subject = str(task_data.get("subject", "")).strip() or None
-    due_date = str(task_data.get("due_date", "")).strip() or None
-    priority = task_data.get("priority", 2)
-    try:
-        priority = int(priority)
-    except (ValueError, TypeError):
-        priority = 2
+    if not isinstance(task_data, dict):
+        return _json_error(
+            "Invalid proposed task.",
+            "INVALID_TASK",
+            400,
+        )
 
-    estimated_minutes = task_data.get("estimated_minutes")
-    if estimated_minutes is not None:
-        try:
-            estimated_minutes = int(estimated_minutes)
-        except (ValueError, TypeError):
-            estimated_minutes = None
+    validated, error = planner.validate_task_input(task_data)
+
+    if error:
+        return _json_error(
+            error,
+            "VALIDATION_ERROR",
+            400,
+        )
 
     conn = db.get_db()
+
     cursor = conn.execute(
-        """INSERT INTO planner_tasks (user_id, title, subject, due_date, priority, estimated_minutes)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (user_id, title, subject, due_date, priority, estimated_minutes),
+        """
+        INSERT INTO planner_tasks (
+            user_id,
+            title,
+            subject,
+            due_date,
+            due_time,
+            estimated_minutes,
+            priority,
+            completed,
+            is_deleted
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)
+        """,
+        (
+            user_id,
+            validated["title"],
+            validated["subject"],
+            validated["due_date"],
+            validated["due_time"],
+            validated["estimated_minutes"],
+            validated["priority"],
+        ),
     )
+
     conn.commit()
 
-    return jsonify({"success": True, "task_id": cursor.lastrowid, "message": "Task added successfully from AI response."})
+    achievements.check_achievements(user_id)
 
+    return jsonify({
+        "success": True,
+        "task_id": cursor.lastrowid,
+        "message": "Task added successfully from AI response.",
+    }), 201
 
 @app.route("/api/ai/apply_schedule", methods=["POST"])
 def apply_proposed_schedule():
