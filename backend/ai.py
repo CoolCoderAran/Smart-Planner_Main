@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-
+import guardrails
 from db import get_db
 from validator import validate_schedule
 from openai import OpenAI
