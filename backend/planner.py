@@ -168,6 +168,72 @@ def add_task(user_id):
     achievements.check_achievements(user_id)
     return jsonify({"success": True, "task": _task_response(conn, task_id, user_id)}), 201
 
+@planner_bp.route("/update/<int:task_id>", methods=["POST"])
+@require_auth
+def update_task(user_id, task_id):
+    payload = request.get_json(silent=True) or request.form.to_dict()
+
+    conn = get_db()
+
+    row = require_owned_row(
+        conn,
+        "planner_tasks",
+        task_id,
+        user_id,
+    )
+
+    if not row or row["is_deleted"]:
+        return api_error(
+            "Task not found.",
+            "TASK_NOT_FOUND",
+            404,
+        )
+
+    validated, error = validate_task_input(payload)
+
+    if error:
+        return api_error(
+            error,
+            "VALIDATION_ERROR",
+            400,
+        )
+
+    conn.execute(
+        """
+        UPDATE planner_tasks
+        SET title = ?,
+            subject = ?,
+            due_date = ?,
+            due_time = ?,
+            estimated_minutes = ?,
+            priority = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND user_id = ?
+          AND is_deleted = 0
+        """,
+        (
+            validated["title"],
+            validated["subject"],
+            validated["due_date"],
+            validated["due_time"],
+            validated["estimated_minutes"],
+            validated["priority"],
+            task_id,
+            user_id,
+        ),
+    )
+
+    conn.commit()
+
+    return jsonify({
+        "success": True,
+        "task": _task_response(
+            conn,
+            task_id,
+            user_id,
+        ),
+    })
 
 @planner_bp.route("/toggle/<int:task_id>", methods=["POST"])
 @require_auth
