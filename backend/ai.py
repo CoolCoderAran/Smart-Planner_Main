@@ -18,7 +18,6 @@ from openai import OpenAI
 
 import achievements
 import db
-import guardrails  # Retained from the existing module.
 import planner
 from auth import get_authenticated_user_id
 from db import get_db
