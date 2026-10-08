@@ -804,7 +804,193 @@ def abandon_focus():
         return _json_error("Focus session was not active.", "SESSION_NOT_ACTIVE", 409)
     return jsonify({"success": True, "session_id": session_id, "status": "abandoned"})
 
+@app.route("/focus/resume", methods=["POST"])
+def resume_focus():
+    user_id = get_authenticated_user_id()
 
+    if user_id is None:
+        return _json_error(
+            "Unauthorized access.",
+            "AUTH_REQUIRED",
+            401,
+        )
+
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
+    try:
+        session_id = int(data.get("session_id"))
+    except (TypeError, ValueError):
+        return _json_error(
+            "A valid focus session ID is required.",
+            "INVALID_SESSION_ID",
+            400,
+        )
+
+    conn = db.get_db()
+
+    row = conn.execute(
+        """
+        SELECT id, paused_at
+        FROM focus_sessions
+        WHERE id = ?
+          AND user_id = ?
+          AND status = 'active'
+        """,
+        (session_id, user_id),
+    ).fetchone()
+
+    if not row:
+        return _json_error(
+            "Focus session not found or is not active.",
+            "SESSION_NOT_FOUND",
+            404,
+        )
+
+    if not row["paused_at"]:
+        return _json_error(
+            "Focus session is not paused.",
+            "SESSION_NOT_PAUSED",
+            409,
+        )
+
+    paused_since = _parse_utc_timestamp(row["paused_at"])
+
+    if paused_since is None:
+        return _json_error(
+            "Stored pause time is invalid.",
+            "SESSION_TIME_INVALID",
+            500,
+        )
+
+    now = _utc_now()
+
+    paused_seconds = max(
+        0,
+        int((now - paused_since).total_seconds()),
+    )
+
+    conn.execute(
+        """
+        UPDATE focus_sessions
+        SET paused_at = NULL,
+            total_paused_seconds =
+                COALESCE(total_paused_seconds, 0) + ?
+        WHERE id = ?
+          AND user_id = ?
+          AND status = 'active'
+        """,
+        (
+            paused_seconds,
+            session_id,
+            user_id,
+        ),
+    )
+
+    conn.commit()
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "resumed_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "paused_seconds": paused_seconds,
+    })@app.route("/focus/resume", methods=["POST"])
+def resume_focus():
+    user_id = get_authenticated_user_id()
+
+    if user_id is None:
+        return _json_error(
+            "Unauthorized access.",
+            "AUTH_REQUIRED",
+            401,
+        )
+
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
+    try:
+        session_id = int(data.get("session_id"))
+    except (TypeError, ValueError):
+        return _json_error(
+            "A valid focus session ID is required.",
+            "INVALID_SESSION_ID",
+            400,
+        )
+
+    conn = db.get_db()
+
+    row = conn.execute(
+        """
+        SELECT id, paused_at
+        FROM focus_sessions
+        WHERE id = ?
+          AND user_id = ?
+          AND status = 'active'
+        """,
+        (session_id, user_id),
+    ).fetchone()
+
+    if not row:
+        return _json_error(
+            "Focus session not found or is not active.",
+            "SESSION_NOT_FOUND",
+            404,
+        )
+
+    if not row["paused_at"]:
+        return _json_error(
+            "Focus session is not paused.",
+            "SESSION_NOT_PAUSED",
+            409,
+        )
+
+    paused_since = _parse_utc_timestamp(row["paused_at"])
+
+    if paused_since is None:
+        return _json_error(
+            "Stored pause time is invalid.",
+            "SESSION_TIME_INVALID",
+            500,
+        )
+
+    now = _utc_now()
+
+    paused_seconds = max(
+        0,
+        int((now - paused_since).total_seconds()),
+    )
+
+    conn.execute(
+        """
+        UPDATE focus_sessions
+        SET paused_at = NULL,
+            total_paused_seconds =
+                COALESCE(total_paused_seconds, 0) + ?
+        WHERE id = ?
+          AND user_id = ?
+          AND status = 'active'
+        """,
+        (
+            paused_seconds,
+            session_id,
+            user_id,
+        ),
+    )
+
+    conn.commit()
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "resumed_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "paused_seconds": paused_seconds,
+    })
 # ---------------------------------------------------------------------------
 # Focus notes
 # ---------------------------------------------------------------------------
