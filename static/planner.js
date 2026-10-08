@@ -81,14 +81,8 @@ async function toggleTask(id) {
 }
 
 async function completeTask(id) {
-    const card = document.querySelector(`[data-task-id="${id}"]`);
-    const completed = card?.dataset.completed === "true";
     try {
-        if (completed) {
-            await apiRequest(`/planner/undo/${id}`, "POST");
-        } else {
-            await apiRequest(`/planner/complete/${id}`, "POST");
-        }
+        await apiRequest(`/planner/toggle/${id}`, "POST");
         window.location.reload();
     } catch (error) {
         alert(error.message);
