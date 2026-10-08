@@ -209,14 +209,14 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
 async function updateTaskDeadline(taskId, newDateISO) {
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const response = await fetch(`/planner/edit/${taskId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ due_date: newDateISO })
-        });
+        const response = await await apiRequest(`/planner/update/${taskId}`, "POST", {
+    title: task.title,
+    subject: task.subject,
+    due_date: newDueDate,
+    due_time: newDueTime,
+    estimated_minutes: task.estimated_minutes || 30,
+    priority: task.priority || 2
+});
 
         if (response.ok) {
             window.location.reload();
