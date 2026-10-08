@@ -21,7 +21,6 @@ import calendar_sync
 import streaks
 import ai
 from auth import get_authenticated_user_id, require_auth
-import guardrails
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
