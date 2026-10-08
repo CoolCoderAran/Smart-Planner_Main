@@ -8,7 +8,6 @@ if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined" &&
 document.addEventListener("DOMContentLoaded", function () {
     updateCalendarView();
 
-    // View Pickers
     document.querySelectorAll(".view-btn").forEach(btn => {
         btn.addEventListener("click", function () {
             document.querySelectorAll(".view-btn").forEach(b => b.classList.remove("active"));
@@ -18,7 +17,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Navigation Controls
     document.getElementById("prevMonthBtn")?.addEventListener("click", () => {
         if (currentView === "month") currentDate.setMonth(currentDate.getMonth() - 1);
         else if (currentView === "week") currentDate.setDate(currentDate.getDate() - 7);
@@ -38,7 +36,6 @@ document.addEventListener("DOMContentLoaded", function () {
         updateCalendarView();
     });
 
-    // Google Calendar Sync Trigger
     document.getElementById("gcalSyncBtn")?.addEventListener("click", syncGoogleCalendar);
 });
 
@@ -56,6 +53,10 @@ function updateCalendarView() {
 }
 
 function formatDateISO(d) {
+    if (!d) return "";
+    if (typeof d === "string") {
+        return d.split("T")[0].split(" ")[0];
+    }
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -85,13 +86,40 @@ function renderMonthView(grid, display) {
     }
 }
 
+function renderWeekView(grid, display) {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+    if (display) {
+        display.textContent = `${startOfWeek.toLocaleDateString('default', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startOfWeek);
+        dayDate.setDate(startOfWeek.getDate() + i);
+        grid.appendChild(createDayCell(dayDate.getDate(), formatDateISO(dayDate), true));
+    }
+}
+
+function renderDayView(grid, display) {
+    const dateISO = formatDateISO(currentDate);
+    if (display) {
+        display.textContent = currentDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+    const dayCell = createDayCell(currentDate.getDate(), dateISO, true);
+    dayCell.classList.add("single-day-view");
+    grid.appendChild(dayCell);
+}
+
 function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
     const dayCell = document.createElement("div");
     dayCell.classList.add("calendar-day");
     dayCell.dataset.date = dateISO;
-    if (dateISO === serverToday) dayCell.classList.add("today");
+    if (dateISO === formatDateISO(serverToday)) dayCell.classList.add("today");
 
-    // Drag and Drop Dragover / Drop Logic
+    // HTML5 Drag and Drop handlers
     dayCell.addEventListener("dragover", (e) => {
         e.preventDefault();
         dayCell.classList.add("drag-over");
@@ -116,9 +144,10 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
         headerHTML = `<span class="weekday-label">${d.toLocaleDateString('default', { weekday: 'short' })}</span> ` + headerHTML;
     }
 
+    // Normalized Task Matching across ISO string formats
     const matchingTasks = (typeof rawTasksData !== "undefined" ? rawTasksData : []).filter(t => {
         if (!t.due_date) return false;
-        return t.due_date.split('T')[0] === dateISO;
+        return formatDateISO(t.due_date) === dateISO;
     });
 
     const pendingTasks = matchingTasks.filter(t => !t.completed);
@@ -144,7 +173,8 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
         const taskBadge = document.createElement("div");
         taskBadge.draggable = true;
         
-        taskBadge.className = `calendar-task-badge priority-${(task.priority || 'medium').toLowerCase()}`;
+        const priorityClass = (task.priority || 'medium').toLowerCase();
+        taskBadge.className = `calendar-task-badge priority-${priorityClass}`;
         if (task.completed) taskBadge.classList.add("completed");
 
         taskBadge.innerHTML = `
@@ -152,12 +182,10 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
             <span class="badge-time">${task.estimated_minutes || 30}m</span>
         `;
         
-        // Dragstart Event Handler
         taskBadge.addEventListener("dragstart", (e) => {
             e.dataTransfer.setData("text/plain", task.id);
         });
 
-        // Click Task Details Handler
         taskBadge.addEventListener("click", (e) => {
             e.stopPropagation();
             openCalendarTaskModal(task);
@@ -166,7 +194,6 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
         tasksContainer.appendChild(taskBadge);
     });
 
-    // Double-click cell to open Task Add Modal
     dayCell.addEventListener("dblclick", () => {
         if (typeof openModal === "function") {
             const dueInput = document.getElementById("modalDueDate");
@@ -178,8 +205,8 @@ function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
     return dayCell;
 }
 
-// Function to update task deadline on drop
-async function updateTaskDeadline(taskId, newDate) {
+// Deadline Update using strict YYYY-MM-DD pattern
+async function updateTaskDeadline(taskId, newDateISO) {
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const response = await fetch(`/planner/edit/${taskId}`, {
@@ -188,7 +215,7 @@ async function updateTaskDeadline(taskId, newDate) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken
             },
-            body: JSON.stringify({ due_date: newDate })
+            body: JSON.stringify({ due_date: newDateISO })
         });
 
         if (response.ok) {
@@ -201,7 +228,60 @@ async function updateTaskDeadline(taskId, newDate) {
     }
 }
 
-// Google Calendar Sync Helper
+function openCalendarTaskModal(task) {
+    const modal = document.getElementById("calendarTaskModal");
+    if (!modal) return;
+
+    const formattedDate = formatDateISO(task.due_date);
+
+    document.getElementById("calModalTitle").textContent = task.title;
+    document.getElementById("calModalSubject").textContent = task.subject || "General";
+    document.getElementById("calModalDueDate").textContent = formattedDate || "None";
+    document.getElementById("calModalPriority").textContent = task.priority || "Medium";
+    document.getElementById("calModalEst").textContent = task.estimated_minutes || 30;
+    document.getElementById("calModalStatus").textContent = task.completed ? "Completed" : "Pending";
+
+    const editBtn = document.getElementById("calEditBtn");
+    const toggleBtn = document.getElementById("calToggleBtn");
+    const deleteBtn = document.getElementById("calDeleteBtn");
+
+    if (editBtn) {
+        editBtn.onclick = () => {
+            closeCalendarModal();
+            if (typeof editTask === "function") {
+                editTask(task.id, task.title, task.subject, task.estimated_minutes, task.priority, formattedDate);
+            }
+        };
+    }
+
+    if (toggleBtn) {
+        toggleBtn.onclick = async () => {
+            if (typeof toggleTask === "function") {
+                await toggleTask(task.id);
+                closeCalendarModal();
+                window.location.reload();
+            }
+        };
+    }
+
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            if (typeof deleteTask === "function") {
+                await deleteTask(task.id);
+                closeCalendarModal();
+                window.location.reload();
+            }
+        };
+    }
+
+    modal.style.display = "flex";
+}
+
+function closeCalendarModal() {
+    const modal = document.getElementById("calendarTaskModal");
+    if (modal) modal.style.display = "none";
+}
+
 async function syncGoogleCalendar() {
     try {
         const response = await fetch('/calendar/sync-google', { method: 'POST' });
