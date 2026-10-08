@@ -1249,4 +1249,5 @@ def get_analytics_data(user_id):
     }
     return jsonify({"success": True, "data": payload})
 
-
+if __name__ == "__main__":
+    app.run(debug=True, port=int(os.environ.get("PORT", "10000")))
