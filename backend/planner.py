@@ -270,3 +270,106 @@ def delete_task(user_id, task_id):
     )
     conn.commit()
     return jsonify({"success": True, "message": "Task deleted successfully."})
+
+@planner_bp.route("/subtask/add", methods=["POST"])
+@require_auth
+def add_subtask(user_id):
+    payload = request.get_json(silent=True) or request.form.to_dict()
+
+    parent_id = payload.get("parent_id")
+
+    try:
+        parent_id = int(parent_id)
+    except (TypeError, ValueError):
+        return api_error(
+            "A valid parent task ID is required.",
+            "INVALID_PARENT_ID",
+            400,
+        )
+
+    title = str(payload.get("title", "")).strip()
+
+    if not title:
+        return api_error(
+            "Subtask title is required.",
+            "TITLE_REQUIRED",
+            400,
+        )
+
+    if len(title) > 255:
+        return api_error(
+            "Subtask title is too long.",
+            "TITLE_TOO_LONG",
+            400,
+        )
+
+    conn = get_db()
+
+    parent = conn.execute(
+        """
+        SELECT id
+        FROM planner_tasks
+        WHERE id = ?
+          AND user_id = ?
+          AND is_deleted = 0
+        """,
+        (parent_id, user_id),
+    ).fetchone()
+
+    if not parent:
+        return api_error(
+            "Parent task not found.",
+            "PARENT_TASK_NOT_FOUND",
+            404,
+        )
+
+    cursor = conn.execute(
+        """
+        INSERT INTO planner_tasks (
+            user_id,
+            parent_id,
+            title,
+            subject,
+            due_date,
+            due_time,
+            estimated_minutes,
+            priority,
+            completed,
+            is_deleted
+        )
+        SELECT
+            user_id,
+            ?,
+            ?,
+            subject,
+            due_date,
+            due_time,
+            estimated_minutes,
+            priority,
+            0,
+            0
+        FROM planner_tasks
+        WHERE id = ?
+          AND user_id = ?
+          AND is_deleted = 0
+        """,
+        (
+            parent_id,
+            title,
+            parent_id,
+            user_id,
+        ),
+    )
+
+    conn.commit()
+
+    subtask_id = cursor.lastrowid
+
+    return jsonify({
+        "success": True,
+        "task": _task_response(
+            conn,
+            subtask_id,
+            user_id,
+        ),
+    }), 201
