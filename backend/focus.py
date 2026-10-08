@@ -1,10 +1,136 @@
-@app.route("/study")
-@app.route("/focus")
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from flask import (
+    Blueprint,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+
+import achievements
+import db
+import streaks
+from auth import get_authenticated_user_id
+
+focus_bp = Blueprint("focus", __name__)
+
+ALLOWED_FOCUS_MODES = {
+    "pomodoro",
+    "deepwork",
+    "quickburst",
+    "examcrunch",
+    "custom",
+}
+
+
+def _json_error(message, code, status):
+    return jsonify({"error": message, "code": code}), status
+
+
+def _auth_redirect():
+    """Match app.py's behavior for unauthenticated page and API requests."""
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and (
+        request.path.startswith("/api/")
+        or request.is_json
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    ):
+        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
+
+    return redirect(url_for("login"))
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
+def _parse_utc_timestamp(value):
+    if not value:
+        return None
+
+    try:
+        clean_value = (
+            str(value).replace(" ", "T").replace("Z", "+00:00")
+        )
+        parsed = datetime.fromisoformat(clean_value)
+    except (ValueError, TypeError):
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
+
+
+def _user_row(user_id):
+    return db.get_db().execute(
+        """SELECT id, username, password_hash, display_name,
+                  default_focus_mins, break_mins, ai_tone, timezone
+             FROM users
+            WHERE id = ?""",
+        (user_id,),
+    ).fetchone()
+
+
+def _get_user_timezone(user_id=None):
+    if user_id:
+        user = _user_row(user_id)
+        if user and user["timezone"]:
+            try:
+                return ZoneInfo(user["timezone"])
+            except (ZoneInfoNotFoundError, ValueError):
+                pass
+
+    header_tz = request.headers.get("X-Timezone")
+    if header_tz:
+        try:
+            return ZoneInfo(header_tz)
+        except (ZoneInfoNotFoundError, ValueError):
+            pass
+
+    return timezone.utc
+
+
+def _user_day_utc_bounds(user_id=None, target_date=None):
+    """Return UTC boundaries for a user's local calendar day."""
+    tz = _get_user_timezone(user_id)
+
+    if target_date is None:
+        local_date = datetime.now(tz).date()
+    elif isinstance(target_date, str):
+        local_date = datetime.strptime(
+            target_date, "%Y-%m-%d"
+        ).date()
+    else:
+        local_date = target_date
+
+    start_local = datetime.combine(
+        local_date,
+        datetime.min.time(),
+        tzinfo=tz,
+    )
+    end_local = start_local + timedelta(days=1)
+
+    start_utc = start_local.astimezone(timezone.utc).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    end_utc = end_local.astimezone(timezone.utc).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    return start_utc, end_utc
+
+
+@focus_bp.route("/study")
+@focus_bp.route("/focus")
 def study():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _auth_redirect()
-    
+
     user = _user_row(user_id)
     if user is None:
         session.clear()
@@ -12,9 +138,13 @@ def study():
 
     rows = db.get_db().execute(
         """SELECT id, title, subject
-           FROM planner_tasks
-          WHERE user_id = ? AND is_deleted = 0 AND completed = 0
-          ORDER BY COALESCE(due_date, '9999-12-31') ASC, priority ASC, id ASC""",
+             FROM planner_tasks
+            WHERE user_id = ?
+              AND is_deleted = 0
+              AND completed = 0
+            ORDER BY COALESCE(due_date, '9999-12-31') ASC,
+                     priority ASC,
+                     id ASC""",
         (user_id,),
     ).fetchall()
 
@@ -22,19 +152,33 @@ def study():
         "study.html",
         planner_tasks=[dict(row) for row in rows],
         selected_task_id=request.args.get("task_id", type=int),
-        default_focus_mins=user["default_focus_mins"] if user["default_focus_mins"] is not None else 25,
-        break_mins=user["break_mins"] if user["break_mins"] is not None else 5,
+        default_focus_mins=(
+            user["default_focus_mins"]
+            if user["default_focus_mins"] is not None
+            else 25
+        ),
+        break_mins=(
+            user["break_mins"]
+            if user["break_mins"] is not None
+            else 5
+        ),
     )
 
 
-@app.route("/focus/start", methods=["POST"])
+@focus_bp.route("/focus/start", methods=["POST"])
 def start_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
-    mode = str(data.get("mode", "pomodoro")).strip().lower()[:30] or "pomodoro"
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
+    mode = str(data.get("mode", "pomodoro")).strip().lower()[:30]
+    mode = mode or "pomodoro"
     if mode not in ALLOWED_FOCUS_MODES:
         mode = "pomodoro"
 
@@ -46,81 +190,151 @@ def start_focus():
             task_id = int(task_id)
         except (TypeError, ValueError):
             return _json_error("Invalid task ID.", "INVALID_TASK_ID", 400)
-        if not db.get_db().execute(
-            "SELECT id FROM planner_tasks WHERE id = ? AND user_id = ? AND is_deleted = 0 AND completed = 0",
+
+        owned_task = db.get_db().execute(
+            """SELECT id
+                 FROM planner_tasks
+                WHERE id = ?
+                  AND user_id = ?
+                  AND is_deleted = 0
+                  AND completed = 0""",
             (task_id, user_id),
-        ).fetchone():
-            return _json_error("Task not found or permission denied.", "TASK_NOT_FOUND", 404)
+        ).fetchone()
+
+        if not owned_task:
+            return _json_error(
+                "Task not found or permission denied.",
+                "TASK_NOT_FOUND",
+                404,
+            )
 
     conn = db.get_db()
     active = conn.execute(
-        "SELECT id FROM focus_sessions WHERE user_id = ? AND status = 'active' LIMIT 1",
+        """SELECT id
+             FROM focus_sessions
+            WHERE user_id = ? AND status = 'active'
+            LIMIT 1""",
         (user_id,),
     ).fetchone()
+
     if active:
-        return _json_error("A Focus session is already active.", "FOCUS_ALREADY_ACTIVE", 409)
+        return _json_error(
+            "A Focus session is already active.",
+            "FOCUS_ALREADY_ACTIVE",
+            409,
+        )
 
     now_iso = _utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
     cursor = conn.execute(
         """INSERT INTO focus_sessions
-           (user_id, task_id, started_at, completed_at, duration_minutes, status, mode)
+               (user_id, task_id, started_at, completed_at,
+                duration_minutes, status, mode)
            VALUES (?, ?, ?, NULL, 0, 'active', ?)""",
         (user_id, task_id, now_iso, mode),
     )
     conn.commit()
-    return jsonify({"success": True, "session_id": cursor.lastrowid, "started_at": now_iso})
+
+    return jsonify({
+        "success": True,
+        "session_id": cursor.lastrowid,
+        "started_at": now_iso,
+    })
 
 
-@app.route("/focus/pause", methods=["POST"])
+@focus_bp.route("/focus/pause", methods=["POST"])
 def pause_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
     try:
         session_id = int(data.get("session_id"))
     except (TypeError, ValueError):
-        return _json_error("A valid focus session ID is required.", "INVALID_SESSION_ID", 400)
+        return _json_error(
+            "A valid focus session ID is required.",
+            "INVALID_SESSION_ID",
+            400,
+        )
 
     conn = db.get_db()
     now_iso = _utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
     changed = conn.execute(
         """UPDATE focus_sessions
               SET paused_at = ?
-            WHERE id = ? AND user_id = ? AND status = 'active' AND paused_at IS NULL""",
+            WHERE id = ?
+              AND user_id = ?
+              AND status = 'active'
+              AND paused_at IS NULL""",
         (now_iso, session_id, user_id),
     ).rowcount
     conn.commit()
+
     if not changed:
-        return _json_error("Focus session is not active or is already paused.", "SESSION_NOT_PAUSABLE", 409)
-    return jsonify({"success": True, "session_id": session_id, "paused_at": now_iso})
+        return _json_error(
+            "Focus session is not active or is already paused.",
+            "SESSION_NOT_PAUSABLE",
+            409,
+        )
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "paused_at": now_iso,
+    })
 
 
-@app.route("/focus/complete", methods=["POST"])
+@focus_bp.route("/focus/complete", methods=["POST"])
 def complete_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
-    session_id = data.get("session_id")
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
     note = str(data.get("note", "")).strip()
     if len(note) > 10_000:
-        return _json_error("Note exceeds maximum length of 10 000 characters.", "NOTE_TOO_LONG", 400)
+        return _json_error(
+            "Note exceeds maximum length of 10 000 characters.",
+            "NOTE_TOO_LONG",
+            400,
+        )
+
     try:
-        session_id = int(session_id)
+        session_id = int(data.get("session_id"))
     except (TypeError, ValueError):
-        return _json_error("A valid focus session ID is required.", "INVALID_SESSION_ID", 400)
+        return _json_error(
+            "A valid focus session ID is required.",
+            "INVALID_SESSION_ID",
+            400,
+        )
 
     conn = db.get_db()
     row = conn.execute(
-        """SELECT id, started_at, status, paused_at, total_paused_seconds, duration_minutes
-           FROM focus_sessions WHERE id = ? AND user_id = ?""",
+        """SELECT id, started_at, status, paused_at,
+                  total_paused_seconds, duration_minutes
+             FROM focus_sessions
+            WHERE id = ? AND user_id = ?""",
         (session_id, user_id),
     ).fetchone()
+
     if not row:
-        return _json_error("Focus session not found.", "SESSION_NOT_FOUND", 404)
+        return _json_error(
+            "Focus session not found.",
+            "SESSION_NOT_FOUND",
+            404,
+        )
+
     if row["status"] == "completed":
         return jsonify({
             "success": True,
@@ -129,41 +343,60 @@ def complete_focus():
             "minutes": row["duration_minutes"],
             "message": "This Focus session was already completed.",
         }), 200
+
     if row["status"] == "abandoned":
         return jsonify({
             "success": False,
             "already": "abandoned",
             "session_id": session_id,
-            "message": "This Focus session was already abandoned and can't be completed.",
+            "message": (
+                "This Focus session was already abandoned "
+                "and can't be completed."
+            ),
         }), 409
 
     started = _parse_utc_timestamp(row["started_at"])
     if started is None:
-        return _json_error("Stored focus start time is invalid.", "SESSION_TIME_INVALID", 500)
+        return _json_error(
+            "Stored focus start time is invalid.",
+            "SESSION_TIME_INVALID",
+            500,
+        )
 
     now = _utc_now()
-
     if now < started:
         return _json_error(
             "Session completion time is before start time.",
-            "SESSION_TIME_INVALID", 400,
+            "SESSION_TIME_INVALID",
+            400,
         )
 
     total_paused_seconds = row["total_paused_seconds"] or 0
     if row["paused_at"]:
         paused_since = _parse_utc_timestamp(row["paused_at"])
         if paused_since:
-            total_paused_seconds += max(0, (now - paused_since).total_seconds())
+            total_paused_seconds += max(
+                0,
+                (now - paused_since).total_seconds(),
+            )
 
-    elapsed_seconds = max(0, (now - started).total_seconds() - total_paused_seconds)
+    elapsed_seconds = max(
+        0,
+        (now - started).total_seconds() - total_paused_seconds,
+    )
     elapsed_minutes = max(1, round(elapsed_seconds / 60))
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     updated = conn.execute(
         """UPDATE focus_sessions
-              SET completed_at = ?, duration_minutes = ?, status = 'completed', paused_at = NULL,
+              SET completed_at = ?,
+                  duration_minutes = ?,
+                  status = 'completed',
+                  paused_at = NULL,
                   note = COALESCE(NULLIF(?, ''), note)
-            WHERE id = ? AND user_id = ? AND status = 'active'""",
+            WHERE id = ?
+              AND user_id = ?
+              AND status = 'active'""",
         (now_iso, elapsed_minutes, note, session_id, user_id),
     ).rowcount
     conn.commit()
@@ -177,6 +410,7 @@ def complete_focus():
         }), 200
 
     achievements.check_achievements(user_id)
+
     return jsonify({
         "success": True,
         "session_id": session_id,
@@ -185,144 +419,78 @@ def complete_focus():
     })
 
 
-@app.route("/focus/abandon", methods=["POST"])
+@focus_bp.route("/focus/abandon", methods=["POST"])
 def abandon_focus():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
     try:
         session_id = int(data.get("session_id"))
     except (TypeError, ValueError):
-        return _json_error("A valid focus session ID is required.", "INVALID_SESSION_ID", 400)
+        return _json_error(
+            "A valid focus session ID is required.",
+            "INVALID_SESSION_ID",
+            400,
+        )
 
     conn = db.get_db()
     changed = conn.execute(
         """UPDATE focus_sessions
-              SET status = 'abandoned', completed_at = ?, paused_at = NULL
-            WHERE id = ? AND user_id = ? AND status = 'active'""",
-        (_utc_now().strftime("%Y-%m-%d %H:%M:%S"), session_id, user_id),
+              SET status = 'abandoned',
+                  completed_at = ?,
+                  paused_at = NULL
+            WHERE id = ?
+              AND user_id = ?
+              AND status = 'active'""",
+        (
+            _utc_now().strftime("%Y-%m-%d %H:%M:%S"),
+            session_id,
+            user_id,
+        ),
     ).rowcount
     conn.commit()
+
     if not changed:
         existing = conn.execute(
             "SELECT status FROM focus_sessions WHERE id = ? AND user_id = ?",
             (session_id, user_id),
         ).fetchone()
+
         if existing and existing["status"] in ("completed", "abandoned"):
             return jsonify({
                 "success": True,
                 "already": existing["status"],
                 "session_id": session_id,
-                "message": f"This Focus session was already {existing['status']}.",
+                "message": (
+                    f"This Focus session was already {existing['status']}."
+                ),
             }), 200
-        return _json_error("Focus session was not active.", "SESSION_NOT_ACTIVE", 409)
-    return jsonify({"success": True, "session_id": session_id, "status": "abandoned"})
 
-@app.route("/focus/resume", methods=["POST"])
-def resume_focus():
-    user_id = get_authenticated_user_id()
-
-    if user_id is None:
         return _json_error(
-            "Unauthorized access.",
-            "AUTH_REQUIRED",
-            401,
-        )
-
-    data = (
-        request.get_json(silent=True)
-        if request.is_json
-        else request.form
-    ) or {}
-
-    try:
-        session_id = int(data.get("session_id"))
-    except (TypeError, ValueError):
-        return _json_error(
-            "A valid focus session ID is required.",
-            "INVALID_SESSION_ID",
-            400,
-        )
-
-    conn = db.get_db()
-
-    row = conn.execute(
-        """
-        SELECT id, paused_at
-        FROM focus_sessions
-        WHERE id = ?
-          AND user_id = ?
-          AND status = 'active'
-        """,
-        (session_id, user_id),
-    ).fetchone()
-
-    if not row:
-        return _json_error(
-            "Focus session not found or is not active.",
-            "SESSION_NOT_FOUND",
-            404,
-        )
-
-    if not row["paused_at"]:
-        return _json_error(
-            "Focus session is not paused.",
-            "SESSION_NOT_PAUSED",
+            "Focus session was not active.",
+            "SESSION_NOT_ACTIVE",
             409,
         )
-
-    paused_since = _parse_utc_timestamp(row["paused_at"])
-
-    if paused_since is None:
-        return _json_error(
-            "Stored pause time is invalid.",
-            "SESSION_TIME_INVALID",
-            500,
-        )
-
-    now = _utc_now()
-
-    paused_seconds = max(
-        0,
-        int((now - paused_since).total_seconds()),
-    )
-
-    conn.execute(
-        """
-        UPDATE focus_sessions
-        SET paused_at = NULL,
-            total_paused_seconds =
-                COALESCE(total_paused_seconds, 0) + ?
-        WHERE id = ?
-          AND user_id = ?
-          AND status = 'active'
-        """,
-        (
-            paused_seconds,
-            session_id,
-            user_id,
-        ),
-    )
-
-    conn.commit()
 
     return jsonify({
         "success": True,
         "session_id": session_id,
-        "resumed_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "paused_seconds": paused_seconds,
-    })@app.route("/focus/resume", methods=["POST"])
+        "status": "abandoned",
+    })
+
+
+@focus_bp.route("/focus/resume", methods=["POST"])
 def resume_focus():
     user_id = get_authenticated_user_id()
-
     if user_id is None:
-        return _json_error(
-            "Unauthorized access.",
-            "AUTH_REQUIRED",
-            401,
-        )
+        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
     data = (
         request.get_json(silent=True)
@@ -340,15 +508,12 @@ def resume_focus():
         )
 
     conn = db.get_db()
-
     row = conn.execute(
-        """
-        SELECT id, paused_at
-        FROM focus_sessions
-        WHERE id = ?
-          AND user_id = ?
-          AND status = 'active'
-        """,
+        """SELECT id, paused_at
+             FROM focus_sessions
+            WHERE id = ?
+              AND user_id = ?
+              AND status = 'active'""",
         (session_id, user_id),
     ).fetchone()
 
@@ -367,7 +532,6 @@ def resume_focus():
         )
 
     paused_since = _parse_utc_timestamp(row["paused_at"])
-
     if paused_since is None:
         return _json_error(
             "Stored pause time is invalid.",
@@ -376,29 +540,21 @@ def resume_focus():
         )
 
     now = _utc_now()
-
     paused_seconds = max(
         0,
         int((now - paused_since).total_seconds()),
     )
 
     conn.execute(
-        """
-        UPDATE focus_sessions
-        SET paused_at = NULL,
-            total_paused_seconds =
-                COALESCE(total_paused_seconds, 0) + ?
-        WHERE id = ?
-          AND user_id = ?
-          AND status = 'active'
-        """,
-        (
-            paused_seconds,
-            session_id,
-            user_id,
-        ),
+        """UPDATE focus_sessions
+              SET paused_at = NULL,
+                  total_paused_seconds =
+                      COALESCE(total_paused_seconds, 0) + ?
+            WHERE id = ?
+              AND user_id = ?
+              AND status = 'active'""",
+        (paused_seconds, session_id, user_id),
     )
-
     conn.commit()
 
     return jsonify({
@@ -407,39 +563,57 @@ def resume_focus():
         "resumed_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "paused_seconds": paused_seconds,
     })
-# ---------------------------------------------------------------------------
-# Focus notes
-# ---------------------------------------------------------------------------
 
-@app.route("/focus/notes", methods=["GET"])
+
+@focus_bp.route("/focus/notes", methods=["GET"])
 def get_focus_notes():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
+
     row = db.get_db().execute(
-        "SELECT focus_notes FROM users WHERE id = ?", (user_id,)
+        "SELECT focus_notes FROM users WHERE id = ?",
+        (user_id,),
     ).fetchone()
+
     note = row["focus_notes"] if row else ""
     return jsonify({"note": note or ""})
 
 
-@app.route("/focus/notes", methods=["POST"])
+@focus_bp.route("/focus/notes", methods=["POST"])
 def save_focus_notes():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
     note = str(data.get("note", ""))
     if len(note) > 10_000:
-        return _json_error("Note exceeds maximum length of 10 000 characters.", "NOTE_TOO_LONG", 400)
+        return _json_error(
+            "Note exceeds maximum length of 10 000 characters.",
+            "NOTE_TOO_LONG",
+            400,
+        )
+
     conn = db.get_db()
-    conn.execute("UPDATE users SET focus_notes = ? WHERE id = ?", (note, user_id))
+    conn.execute(
+        "UPDATE users SET focus_notes = ? WHERE id = ?",
+        (note, user_id),
+    )
     conn.commit()
+
     return jsonify({"success": True, "note": note})
 
 
-@app.route("/focus/session/<int:session_id>/note", methods=["GET", "POST"])
+@focus_bp.route(
+    "/focus/session/<int:session_id>/note",
+    methods=["GET", "POST"],
+)
 def focus_session_note(session_id):
     user_id = get_authenticated_user_id()
     if user_id is None:
@@ -447,57 +621,99 @@ def focus_session_note(session_id):
 
     conn = db.get_db()
     row = conn.execute(
-        "SELECT id, note FROM focus_sessions WHERE id = ? AND user_id = ?",
+        """SELECT id, note
+             FROM focus_sessions
+            WHERE id = ? AND user_id = ?""",
         (session_id, user_id),
     ).fetchone()
+
     if not row:
-        return _json_error("Focus session not found.", "SESSION_NOT_FOUND", 404)
+        return _json_error(
+            "Focus session not found.",
+            "SESSION_NOT_FOUND",
+            404,
+        )
 
     if request.method == "GET":
-        return jsonify({"session_id": session_id, "note": row["note"] or ""})
+        return jsonify({
+            "session_id": session_id,
+            "note": row["note"] or "",
+        })
 
-    data = (request.get_json(silent=True) if request.is_json else request.form) or {}
+    data = (
+        request.get_json(silent=True)
+        if request.is_json
+        else request.form
+    ) or {}
+
     note = str(data.get("note", ""))
     if len(note) > 10_000:
-        return _json_error("Note exceeds maximum length of 10 000 characters.", "NOTE_TOO_LONG", 400)
+        return _json_error(
+            "Note exceeds maximum length of 10 000 characters.",
+            "NOTE_TOO_LONG",
+            400,
+        )
+
     conn.execute(
-        "UPDATE focus_sessions SET note = ? WHERE id = ? AND user_id = ?",
+        """UPDATE focus_sessions
+              SET note = ?
+            WHERE id = ? AND user_id = ?""",
         (note, session_id, user_id),
     )
     conn.commit()
-    return jsonify({"success": True, "session_id": session_id, "note": note})
+
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "note": note,
+    })
 
 
-# ---------------------------------------------------------------------------
-# Focus stats and history
-# ---------------------------------------------------------------------------
-
-@app.route("/get_study_stats")
+@focus_bp.route("/get_study_stats")
 def get_study_stats():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    # Timezone-bounded dynamic range calculation
     user_tz = _get_user_timezone(user_id)
     today_user = datetime.now(user_tz).date()
-    today_start_utc, today_end_utc = _user_day_utc_bounds(user_id, today_user)
-    
+    today_start_utc, today_end_utc = _user_day_utc_bounds(
+        user_id, today_user
+    )
+
     seven_days_ago_user = today_user - timedelta(days=6)
-    week_start_utc, _ = _user_day_utc_bounds(user_id, seven_days_ago_user)
+    week_start_utc, _ = _user_day_utc_bounds(
+        user_id, seven_days_ago_user
+    )
 
     conn = db.get_db()
     stats = conn.execute(
         """SELECT
-             COALESCE(SUM(CASE WHEN completed_at >= ? AND completed_at < ? THEN duration_minutes ELSE 0 END), 0) AS today_minutes,
-             COALESCE(SUM(CASE WHEN completed_at >= ? THEN duration_minutes ELSE 0 END), 0) AS weekly_minutes,
-             COUNT(*) AS total_sessions,
-             COALESCE(SUM(duration_minutes), 0) AS total_minutes
-           FROM focus_sessions
-          WHERE user_id = ? AND status = 'completed'""",
+               COALESCE(
+                   SUM(
+                       CASE
+                           WHEN completed_at >= ? AND completed_at < ?
+                           THEN duration_minutes ELSE 0
+                       END
+                   ), 0
+               ) AS today_minutes,
+               COALESCE(
+                   SUM(
+                       CASE
+                           WHEN completed_at >= ?
+                           THEN duration_minutes ELSE 0
+                       END
+                   ), 0
+               ) AS weekly_minutes,
+               COUNT(*) AS total_sessions,
+               COALESCE(SUM(duration_minutes), 0) AS total_minutes
+             FROM focus_sessions
+            WHERE user_id = ? AND status = 'completed'""",
         (today_start_utc, today_end_utc, week_start_utc, user_id),
     ).fetchone()
+
     streak = streaks.calculate_streaks(user_id)
+
     return jsonify({
         "today_minutes": stats["today_minutes"],
         "weekly_minutes": stats["weekly_minutes"],
@@ -508,32 +724,41 @@ def get_study_stats():
     })
 
 
-@app.route("/get_recent_sessions")
+@focus_bp.route("/get_recent_sessions")
 def get_recent_sessions():
     user_id = get_authenticated_user_id()
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
-    
+
     user_tz = _get_user_timezone(user_id)
     rows = db.get_db().execute(
-        """SELECT fs.id, fs.duration_minutes AS minutes, fs.completed_at, fs.task_id,
-                  fs.mode, fs.note,
+        """SELECT fs.id,
+                  fs.duration_minutes AS minutes,
+                  fs.completed_at,
+                  fs.task_id,
+                  fs.mode,
+                  fs.note,
                   COALESCE(pt.title, 'General Focus') AS task
              FROM focus_sessions fs
-             LEFT JOIN planner_tasks pt ON pt.id = fs.task_id AND pt.user_id = fs.user_id
+             LEFT JOIN planner_tasks pt
+               ON pt.id = fs.task_id AND pt.user_id = fs.user_id
             WHERE fs.user_id = ? AND fs.status = 'completed'
-            ORDER BY fs.completed_at DESC LIMIT 5""",
+            ORDER BY fs.completed_at DESC
+            LIMIT 5""",
         (user_id,),
     ).fetchall()
 
     result = []
     for row in rows:
         completed_at_str = row["completed_at"]
+
         if completed_at_str:
-            dt = _parse_utc_timestamp(completed_at_str)
-            if dt:
-                completed_at_str = dt.astimezone(user_tz).isoformat()
-        
+            completed_at = _parse_utc_timestamp(completed_at_str)
+            if completed_at:
+                completed_at_str = completed_at.astimezone(
+                    user_tz
+                ).isoformat()
+
         result.append({
             "id": row["id"],
             "task": row["task"],
