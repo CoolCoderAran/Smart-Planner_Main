@@ -373,3 +373,118 @@ def add_subtask(user_id):
             user_id,
         ),
     }), 201
+
+@planner_bp.route("/batch", methods=["POST"])
+@require_auth
+def batch_tasks(user_id):
+    payload = request.get_json(silent=True) or {}
+
+    action = str(payload.get("action", "")).strip().lower()
+    task_ids = payload.get("task_ids", [])
+
+    if action not in {
+        "complete",
+        "delete",
+        "shift_today",
+    }:
+        return api_error(
+            "Unsupported batch action.",
+            "INVALID_BATCH_ACTION",
+            400,
+        )
+
+    if not isinstance(task_ids, list) or not task_ids:
+        return api_error(
+            "At least one task ID is required.",
+            "TASK_IDS_REQUIRED",
+            400,
+        )
+
+    try:
+        task_ids = list({
+            int(task_id)
+            for task_id in task_ids
+        })
+    except (TypeError, ValueError):
+        return api_error(
+            "Task IDs must be integers.",
+            "INVALID_TASK_IDS",
+            400,
+        )
+
+    conn = get_db()
+
+    placeholders = ",".join("?" for _ in task_ids)
+
+    owned_rows = conn.execute(
+        f"""
+        SELECT id
+        FROM planner_tasks
+        WHERE user_id = ?
+          AND is_deleted = 0
+          AND id IN ({placeholders})
+        """,
+        [user_id, *task_ids],
+    ).fetchall()
+
+    owned_ids = {row["id"] for row in owned_rows}
+
+    unauthorized_ids = set(task_ids) - owned_ids
+
+    if unauthorized_ids:
+        return api_error(
+            "One or more tasks were not found.",
+            "TASK_NOT_FOUND",
+            404,
+        )
+
+    if action == "complete":
+        conn.execute(
+            f"""
+            UPDATE planner_tasks
+            SET completed = 1,
+                completed_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+              AND is_deleted = 0
+              AND id IN ({placeholders})
+            """,
+            [user_id, *task_ids],
+        )
+
+    elif action == "delete":
+        conn.execute(
+            f"""
+            UPDATE planner_tasks
+            SET is_deleted = 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+              AND is_deleted = 0
+              AND id IN ({placeholders})
+            """,
+            [user_id, *task_ids],
+        )
+
+    elif action == "shift_today":
+        conn.execute(
+            f"""
+            UPDATE planner_tasks
+            SET due_date = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+              AND is_deleted = 0
+              AND id IN ({placeholders})
+            """,
+            [_utc_today(), user_id, *task_ids],
+        )
+
+    conn.commit()
+
+    achievements.check_achievements(user_id)
+
+    return jsonify({
+        "success": True,
+        "action": action,
+        "updated": len(task_ids),
+    })
+    
