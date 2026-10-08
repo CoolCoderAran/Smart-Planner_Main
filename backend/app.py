@@ -18,9 +18,9 @@ import db
 import planner
 import calendar_sync
 import streaks
-from ai import build_user_context, query_terra_ai
+import ai
 from auth import get_authenticated_user_id, require_auth
-from guardrails import check_rate_limit, validate_scope
+import guardrails
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
