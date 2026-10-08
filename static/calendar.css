@@ -1,13 +1,13 @@
 @import url('hub.css');
 
-/* Main Container — Boxed Layout */
+/* Main Boxed Layout */
 .main-content {
     max-width: 1100px;
     margin: 2rem auto;
     padding: 0 1.5rem;
 }
 
-/* Header Controls */
+/* Header & Controls */
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -29,10 +29,10 @@
 }
 
 .calendar-nav-controls h2 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-title);
-    min-width: 170px;
+    min-width: 180px;
     text-align: center;
 }
 
@@ -40,12 +40,15 @@
     background: var(--accent-glow);
     color: var(--accent);
     border: 1px solid var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
-/* Grid Box */
+.calendar-view-picker .view-btn.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+}
+
+/* Calendar Box Container */
 .calendar-container {
     background: var(--card-bg);
     backdrop-filter: var(--backdrop-blur);
@@ -74,7 +77,11 @@
     gap: 8px;
 }
 
-/* Individual Cell Styling using hub.css variables */
+.calendar-grid.view-day {
+    grid-template-columns: 1fr;
+}
+
+/* Calendar Cells */
 .calendar-day {
     background: var(--card-bg-hover);
     border: 1px solid var(--card-border);
@@ -126,7 +133,7 @@
 .workload-tag.moderate { background: var(--priority-med-bg); color: var(--priority-med-text); }
 .workload-tag.heavy { background: var(--priority-high-bg); color: var(--priority-high-text); }
 
-/* Draggable Task Badges linked to hub.css Priorities */
+/* Draggable Task Badges */
 .day-tasks {
     display: flex;
     flex-direction: column;
@@ -176,3 +183,17 @@
     text-decoration: line-through;
     opacity: 0.6;
 }
+
+/* Modals */
+.task-button {
+    border: none;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.complete-button { background: var(--priority-low-bg); color: var(--priority-low-text); border: 1px solid var(--priority-low); }
+.edit-button { background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent); }
+.delete-button { background: var(--priority-high-bg); color: var(--priority-high-text); border: 1px solid var(--priority-high); }
