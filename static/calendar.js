@@ -283,18 +283,45 @@ function closeCalendarModal() {
 }
 
 async function syncGoogleCalendar() {
+    const button = document.getElementById("gcalSyncBtn");
+
+    if (!button) return;
+
+    const originalText = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "Syncing...";
+
     try {
-        const response = await fetch('/calendar/sync-google', { method: 'POST' });
-        const result = await response.json();
-        if (result.success) {
-            alert("Successfully synced with Google Calendar!");
-            window.location.reload();
-        } else if (result.auth_url) {
-            window.location.href = result.auth_url;
-        } else {
-            alert(result.message || "Failed to sync with Google Calendar.");
+        const response = await apiRequest(
+            "/api/calendar/google/sync",
+            "POST"
+        );
+
+        const pulled = response.pulled ?? 0;
+        const pushed = response.pushed ?? 0;
+
+        button.textContent = "Synced";
+
+        alert(
+            `Google Calendar synced successfully.\n\n` +
+            `Imported: ${pulled}\n` +
+            `Exported: ${pushed}`
+        );
+
+        window.location.reload();
+
+    } catch (error) {
+        button.textContent = originalText;
+        alert(error.message);
+
+    } finally {
+        button.disabled = false;
+
+        if (button.textContent === "Synced") {
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
         }
-    } catch (err) {
-        console.error("Google Calendar Sync Error:", err);
     }
 }
