@@ -7,19 +7,32 @@ import sys
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
-
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import focus
+# Load environment variables before application configuration.
+load_dotenv()
+
+# These modules define Blueprints and do not import app.py.
 import achievements
-import db
-import planner
-import calendar_sync
-import streaks
 import ai
+import calendar_sync
+import db
+import focus
+import planner
+import streaks
+
 from auth import get_authenticated_user_id, require_auth
 
 
@@ -31,25 +44,28 @@ app = Flask(
     static_folder=BASE_DIR / "static",
 )
 
-load_dotenv()
-
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY must be configured before starting Smart Planner.")
+    raise RuntimeError(
+        "SECRET_KEY must be configured before starting Smart Planner."
+    )
 
 app.secret_key = SECRET_KEY
 app.permanent_session_lifetime = timedelta(days=30)
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
 )
 
-ALLOWED_FOCUS_MODES = {"pomodoro", "deepwork", "quickburst", "examcrunch", "custom"}
-
+# Initialize the database and register all feature Blueprints.
 db.init_db()
+
 app.register_blueprint(planner.planner_bp)
 app.register_blueprint(calendar_sync.calendar_bp)
+app.register_blueprint(ai.ai_bp)
+app.register_blueprint(focus.focus_bp)
 
 
 @app.teardown_appcontext
