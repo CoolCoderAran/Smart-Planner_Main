@@ -606,7 +606,8 @@ def calendar_page():
         return _auth_redirect()
     user_id = get_authenticated_user_id()
     rows = db.get_db().execute(
-        """SELECT id, title, subject, estimated_minutes
+           """SELECT id, title, subject, due_date, due_time,
+                  estimated_minutes, priority, completed
            FROM planner_tasks pt
           WHERE pt.user_id = ? AND pt.is_deleted = 0 AND pt.completed = 0
             AND pt.due_date IS NOT NULL
@@ -615,6 +616,7 @@ def calendar_page():
                  WHERE e.planner_task_id = pt.id AND e.is_deleted = 0
             )
           ORDER BY due_date ASC, priority ASC""",
+,
         (user_id,),
     ).fetchall()
     return render_template("calendar.html", tasks=[dict(row) for row in rows])
