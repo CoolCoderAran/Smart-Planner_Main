@@ -50,7 +50,7 @@
         <div class="toolbar-row">
             <button class="open-btn glass-btn" onclick="toggleSidebar()">&#9776; Menu</button>
             <div class="search-bar">
-                <input id="search" type="search" class="glass-input" placeholder="🔍 Search tasks by title or subject..." aria-label="Search tasks">
+                <input id="search" type="search" class="glass-input" placeholder="🔍 Quick Add or Search (e.g., 'Physics lab p1 tomorrow')..." aria-label="Search tasks">
             </div>
             <button class="add-task-btn glass-btn primary" onclick="openModal()">+ Add Task</button>
         </div>
@@ -67,64 +67,59 @@
     <main class="task-grid-container">
         <p class="date-display">Today: <span id="current-date"></span></p>
 
-        {% macro render_task(task, category, overdue=false) %}
-        <div class="task-card glass-card priority-{{ task.priority|lower }}{% if overdue %} overdue-card{% endif %}{% if task.completed %} completed{% endif %}"
+        {% macro render_task_node(task, category, overdue=false) %}
+        <div class="task-card glass-card priority-{{ task.priority }}{% if overdue %} overdue-card{% endif %}{% if task.completed %} completed{% endif %}"
              data-task-id="{{ task.id }}"
              data-priority="{{ task.priority }}"
              data-due="{{ task.due_date or '' }}"
              data-completed="{{ 'true' if task.completed else 'false' }}"
              data-category="{{ category }}">
+            
             <div class="task-main">
-                <input type="checkbox" class="task-select-cb" value="{{ task.id }}"
-                       onchange="toggleTaskSelection({{ task.id }}, this)"
-                       aria-label="Select {{ task.title }}">
-                <button class="task-toggle-btn task-toggle glass-btn" onclick="toggleTask({{ task.id }})"
-                        aria-label="Toggle {{ task.title }} completion">
-                    {% if task.completed %}✓{% else %}○{% endif %}
-                </button>
+                <div class="task-left-content">
+                    <input type="checkbox" class="task-select-cb" value="{{ task.id }}"
+                           onchange="toggleTaskSelection({{ task.id }}, this)"
+                           aria-label="Select {{ task.title }}">
+                    
+                    <button class="task-toggle-btn" onclick="toggleTask({{ task.id }})" aria-label="Toggle completion">
+                        ✓
+                    </button>
 
-                <div class="task-info task-details">
-                    <div class="task-title {% if task.completed %}completed-text{% endif %}">
-                        {% if not task.completed %}<span class="priority-dot"></span>{% endif %}
-                        {% if task.completed %}<s>{{ task.title }}</s>{% else %}{{ task.title }}{% endif %}
-                    </div>
-                    {% if task.subject %}<div class="task-subject task-subject-badge">{{ task.subject }}</div>{% endif %}
-                    <div class="task-meta">
-                        <span>⏱ {{ task.estimated_minutes }} min</span> ·
-                        <span class="{% if overdue %}overdue-text{% endif %}">
-                            📅 {% if task.completed %}Completed{% else %}Due: {{ task.due_date or 'No date' }}{% if task.due_time %} at {{ task.due_time }}{% endif %}{% endif %}
-                        </span>
+                    <div class="task-info">
+                        <div class="task-title">
+                            {{ task.title }}
+                        </div>
+                        <div class="task-meta">
+                            {% if task.subject %}<span class="task-subject-badge">{{ task.subject }}</span>{% endif %}
+                            <span>⏱ {{ task.estimated_minutes }} min</span> ·
+                            <span class="{% if overdue %}overdue-text{% endif %}">
+                                📅 {% if task.completed %}Completed{% else %}Due: {{ task.due_date or 'No date' }}{% if task.due_time %} at {{ task.due_time }}{% endif %}{% endif %}
+                            </span>
+                            {% if task.subtasks %}
+                            · <span class="subtask-count-badge">🌿 {{ task.subtasks|length }} subtask{% if task.subtasks|length > 1 %}s{% endif %}</span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
                 <div class="task-actions">
-                    <button class="task-button complete-button glass-btn {% if not task.completed %}primary{% endif %}"
-                            onclick="completeTask({{ task.id }})">
-                        {% if task.completed %}↩ Undo{% else %}✓ Complete{% endif %}
-                    </button>
-                    {% if not task.completed %}
-                    <button class="task-button edit-button glass-btn"
-                            onclick="editTask({{ task.id }}, {{ task.title|tojson }}, {{ (task.subject or '')|tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority|tojson }}, {{ (task.due_date or '')|tojson }}, {{ (task.due_time or '')|tojson }})">
-                        Edit
-                    </button>
-                    {% endif %}
-                    <button class="add-subtask-btn task-button glass-btn" onclick="openSubtaskModal({{ task.id }})">+ Subtask</button>
-                    <button class="task-button delete-button glass-btn danger" onclick="deleteTask({{ task.id }})">🗑 Delete</button>
+                    <button class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
+                    <button class="glass-btn" onclick="editTask({{ task.id }}, {{ task.title|tojson }}, {{ (task.subject or '')|tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority }}, {{ (task.due_date or '')|tojson }}, {{ (task.due_time or '')|tojson }})">Edit</button>
+                    <button class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
                 </div>
             </div>
 
+            <!-- Inline Subtask Creation Input -->
+            <div id="inlineSubtaskForm-{{ task.id }}" class="inline-subtask-form">
+                <input type="text" id="inlineSubtaskInput-{{ task.id }}" class="glass-input inline-subtask-input" placeholder="Subtask title (e.g. 'Draft section 1 p2')..." onkeydown="handleInlineSubtaskKey(event, {{ task.id }})">
+                <button class="glass-btn primary" onclick="submitInlineSubtask({{ task.id }})">Add</button>
+            </div>
+
+            <!-- Recursive Subtask Nesting Tree -->
             {% if task.subtasks %}
-            <div class="subtask-list">
+            <div class="subtask-tree">
                 {% for subtask in task.subtasks %}
-                <div class="subtask-card{% if subtask.completed %} completed{% endif %}" data-task-id="{{ subtask.id }}">
-                    <button class="task-toggle-btn glass-btn" onclick="toggleTask({{ subtask.id }})" aria-label="Toggle {{ subtask.title }} completion">
-                        {% if subtask.completed %}✓{% else %}○{% endif %}
-                    </button>
-                    <span class="subtask-title{% if subtask.completed %} completed-text{% endif %}">
-                        {% if subtask.completed %}<s>{{ subtask.title }}</s>{% else %}{{ subtask.title }}{% endif %}
-                    </span>
-                    <button class="task-delete-btn btn-sm btn-danger" onclick="deleteTask({{ subtask.id }})" aria-label="Delete subtask">×</button>
-                </div>
+                    {{ render_task_node(subtask, category, overdue) }}
                 {% endfor %}
             </div>
             {% endif %}
@@ -135,7 +130,7 @@
             <h2>Today</h2>
             <div id="today-tasks" class="task-list">
                 {% for task in tasks if not task.completed and (task.due_date == 'Today' or task.due_date == today_date) and not task.is_overdue %}
-                    {{ render_task(task, 'today') }}
+                    {{ render_task_node(task, 'today') }}
                 {% else %}
                     <p class="no-tasks glass-card">No tasks scheduled for today!</p>
                 {% endfor %}
@@ -146,7 +141,7 @@
             <h2 class="section-title overdue-title">⚠️ Overdue</h2>
             <div id="overdue-tasks" class="task-list">
                 {% for task in tasks if not task.completed and task.is_overdue %}
-                    {{ render_task(task, 'overdue', true) }}
+                    {{ render_task_node(task, 'overdue', true) }}
                 {% else %}
                     <p class="no-tasks glass-card">No overdue tasks!</p>
                 {% endfor %}
@@ -157,7 +152,7 @@
             <h2>Upcoming</h2>
             <div id="upcoming-tasks" class="task-list">
                 {% for task in tasks if not task.completed and task.due_date != 'Today' and task.due_date != today_date and not task.is_overdue %}
-                    {{ render_task(task, 'upcoming') }}
+                    {{ render_task_node(task, 'upcoming') }}
                 {% else %}
                     <p class="no-tasks glass-card">No upcoming tasks!</p>
                 {% endfor %}
@@ -168,7 +163,7 @@
             <h2>Completed</h2>
             <div id="completed-tasks" class="task-list">
                 {% for task in tasks if task.completed %}
-                    {{ render_task(task, 'completed') }}
+                    {{ render_task_node(task, 'completed') }}
                 {% else %}
                     <p class="no-tasks glass-card">No completed tasks yet!</p>
                 {% endfor %}
@@ -176,6 +171,7 @@
         </section>
     </main>
 
+    <!-- Add/Edit Task Modal -->
     <div id="taskModal" class="modal-overlay">
         <div class="modal-content glass-card">
             <button class="modal-close" onclick="closeModal()" aria-label="Close modal">&times;</button>
@@ -184,11 +180,11 @@
                 <input type="hidden" id="modalTaskId" name="task_id" value="">
                 <div class="form-group">
                     <label for="modalTaskName">Task Name</label>
-                    <input type="text" id="modalTaskName" class="glass-input" name="title" placeholder="e.g., Read Chapter 4 & take notes" required maxlength="255">
+                    <input type="text" id="modalTaskName" class="glass-input" name="title" placeholder="e.g., Read Chapter 4 p1 tomorrow" required maxlength="255">
                 </div>
                 <div class="form-group">
                     <label for="modalSubject">Subject / Course</label>
-                    <input type="text" id="modalSubject" class="glass-input" name="subject" placeholder="e.g., AP Computer Science" required>
+                    <input type="text" id="modalSubject" class="glass-input" name="subject" placeholder="e.g., AP Computer Science">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -208,9 +204,9 @@
                     <div class="form-group">
                         <label for="modalPriority">Priority</label>
                         <select id="modalPriority" class="glass-input" name="priority" required>
-                            <option value="1">High Priority</option>
-                            <option value="2" selected>Medium Priority</option>
-                            <option value="3">Low Priority</option>
+                            <option value="1">High Priority (P1)</option>
+                            <option value="2" selected>Medium Priority (P2)</option>
+                            <option value="3">Low Priority (P3)</option>
                         </select>
                     </div>
                 </div>
