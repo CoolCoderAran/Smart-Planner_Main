@@ -80,17 +80,8 @@ async function toggleTask(id) {
     }
 }
 
-async function completeTask(id) {
-    try {
-        await apiRequest(`/planner/toggle/${id}`, "POST");
-        window.location.reload();
-    } catch (error) {
-        alert(error.message);
-    }
-}
-
 async function deleteTask(id) {
-    if (!confirm("Are you sure you want to delete this task?")) return;
+    if (!confirm("Are you sure you want to delete this task and its subtasks?")) return;
     try {
         await apiRequest(`/planner/delete/${id}`, "DELETE");
         window.location.reload();
@@ -99,13 +90,32 @@ async function deleteTask(id) {
     }
 }
 
-async function openSubtaskModal(parentId) {
-    const title = prompt("Enter subtask title:");
-    if (!title || !title.trim()) return;
+function toggleInlineSubtaskForm(parentId) {
+    const form = document.getElementById(`inlineSubtaskForm-${parentId}`);
+    if (form) {
+        form.classList.toggle("active");
+        if (form.classList.contains("active")) {
+            document.getElementById(`inlineSubtaskInput-${parentId}`)?.focus();
+        }
+    }
+}
+
+function handleInlineSubtaskKey(event, parentId) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        submitInlineSubtask(parentId);
+    }
+}
+
+async function submitInlineSubtask(parentId) {
+    const input = document.getElementById(`inlineSubtaskInput-${parentId}`);
+    const title = input?.value?.trim();
+    if (!title) return;
+
     try {
         await apiRequest("/planner/subtask/add", "POST", {
             parent_id: parentId,
-            title: title.trim()
+            title
         });
         window.location.reload();
     } catch (error) {
@@ -123,10 +133,7 @@ function toggleTaskSelection(taskId, checkbox) {
 }
 
 async function runBatch(action) {
-    if (!selectedTaskIds.size) {
-        alert("Please select at least one task.");
-        return;
-    }
+    if (!selectedTaskIds.size) return;
     try {
         await apiRequest("/planner/batch", "POST", {
             action,
@@ -138,16 +145,24 @@ async function runBatch(action) {
     }
 }
 
-function batchSetStatus(status) {
-    if (status === "completed") runBatch("complete");
-}
+function batchSetStatus(status) { if (status === "completed") runBatch("complete"); }
+function batchSetDate(targetDate) { if (targetDate === "today") runBatch("shift_today"); }
+function batchDelete() { if (confirm("Delete all selected tasks?")) runBatch("delete"); }
 
-function batchSetDate(targetDate) {
-    if (targetDate === "today") runBatch("shift_today");
-}
+function sortContainerCards(container) {
+    const cards = Array.from(container.children).filter(el => el.classList.contains("task-card"));
+    
+    cards.sort((a, b) => {
+        const pA = Number(a.dataset.priority) || 3;
+        const pB = Number(b.dataset.priority) || 3;
+        if (pA !== pB) return pA - pB;
 
-function batchDelete() {
-    if (confirm("Delete all selected tasks?")) runBatch("delete");
+        const dueA = a.dataset.due || "9999-99-99";
+        const dueB = b.dataset.due || "9999-99-99";
+        return dueA.localeCompare(dueB);
+    });
+
+    cards.forEach(card => container.appendChild(card));
 }
 
 function applyFilters() {
@@ -155,39 +170,59 @@ function applyFilters() {
 
     document.querySelectorAll(".task-section").forEach(section => {
         const matchesSection = currentFilter === "all" || section.dataset.section === currentFilter;
-        let visibleCardsInSection = 0;
+        let visibleCards = 0;
+        const listContainer = section.querySelector(".task-list");
 
         section.querySelectorAll(".task-card").forEach(card => {
-            const matchesCategory = currentFilter === "all" || card.dataset.category === currentFilter || section.dataset.section === currentFilter;
+            const matchesCat = currentFilter === "all" || card.dataset.category === currentFilter || section.dataset.section === currentFilter;
             const text = card.textContent.toLowerCase();
             const matchesSearch = !query || text.includes(query);
             
-            const isVisible = matchesCategory && matchesSearch;
+            const isVisible = matchesCat && matchesSearch;
             card.style.display = isVisible ? "" : "none";
-            if (isVisible) visibleCardsInSection++;
+            if (isVisible) visibleCards++;
         });
 
-        section.style.display = matchesSection || visibleCardsInSection > 0 ? "" : "none";
+        if (listContainer) sortContainerCards(listContainer);
+        section.style.display = matchesSection || visibleCards > 0 ? "" : "none";
     });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date();
-    const date = today.toLocaleDateString("en-US", {
-        weekday: "long", year: "numeric", month: "long", day: "numeric"
-    });
     const dateEl = document.getElementById("current-date");
-    if (dateEl) dateEl.textContent = date;
+    if (dateEl) {
+        dateEl.textContent = today.toLocaleDateString("en-US", {
+            weekday: "long", year: "numeric", month: "long", day: "numeric"
+        });
+    }
 
-    document.querySelectorAll(".filter-btn, .sidebar-filter-link").forEach(button => {
-        button.addEventListener("click", event => {
-            event.preventDefault();
-            currentFilter = button.dataset.filter || "all";
+    document.querySelectorAll(".filter-btn, .sidebar-filter-link").forEach(btn => {
+        btn.addEventListener("click", e => {
+            e.preventDefault();
+            currentFilter = btn.dataset.filter || "all";
             document.querySelectorAll(".filter-btn, .sidebar-filter-link").forEach(b => {
                 b.classList.toggle("active", b.dataset.filter === currentFilter);
             });
             applyFilters();
         });
+    });
+
+    // Quick Add via search bar on Enter key press
+    document.getElementById("search")?.addEventListener("keydown", async e => {
+        if (e.key === "Enter" && e.target.value.includes("p")) {
+            e.preventDefault();
+            const val = e.target.value.trim();
+            if (!val) return;
+
+            try {
+                await apiRequest("/planner/add", "POST", { title: val });
+                e.target.value = "";
+                window.location.reload();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
     });
 
     document.getElementById("search")?.addEventListener("input", applyFilters);
@@ -219,4 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("keydown", event => {
         if (event.key === "Escape") closeModal();
     });
+    
+    applyFilters();
 });
