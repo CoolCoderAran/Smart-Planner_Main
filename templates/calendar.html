@@ -1,17 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="modern">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendar • Smart Planner</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- CSS Load Order: Core Design System First -->
     <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='navbar.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='planner.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
 </head>
-<body>
+<body class="calendar-body">
+<script>
+    (function () {
+        const savedTheme = localStorage.getItem('appTheme') || 'modern';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+</script>
 
     {% include 'navbar.html' %}
 
