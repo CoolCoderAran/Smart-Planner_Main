@@ -39,7 +39,7 @@
 </aside>
 
 <div id="mainContent" class="main-container">
-    <header class="planner-header glass-card">
+    <header class="planner-header">
         <div id="batchBar" class="batch-bar glass-card" style="display: none;">
             <span id="selectedCount">0 tasks selected</span>
             <button class="glass-btn" onclick="batchSetStatus('completed')">Mark Completed</button>
@@ -50,7 +50,7 @@
         <div class="toolbar-row">
             <button class="open-btn glass-btn" onclick="toggleSidebar()">&#9776; Menu</button>
             <div class="search-bar">
-                <input id="search" type="search" class="glass-input" placeholder="🔍 Quick Add or Search (e.g., 'Physics lab p1 tomorrow')..." aria-label="Search tasks">
+                <input id="search" type="search" placeholder="🔍 Search or quick-add (e.g., 'Submit lab report p1 tomorrow')..." aria-label="Search tasks">
             </div>
             <button class="add-task-btn glass-btn primary" onclick="openModal()">+ Add Task</button>
         </div>
@@ -68,7 +68,7 @@
         <p class="date-display">Today: <span id="current-date"></span></p>
 
         {% macro render_task_node(task, category, overdue=false) %}
-        <div class="task-card glass-card priority-{{ task.priority }}{% if overdue %} overdue-card{% endif %}{% if task.completed %} completed{% endif %}"
+        <div class="task-card priority-{{ task.priority }}{% if overdue %} overdue-card{% endif %}{% if task.completed %} completed{% endif %}"
              data-task-id="{{ task.id }}"
              data-priority="{{ task.priority }}"
              data-due="{{ task.due_date or '' }}"
@@ -81,22 +81,20 @@
                            onchange="toggleTaskSelection({{ task.id }}, this)"
                            aria-label="Select {{ task.title }}">
                     
-                    <button class="task-toggle-btn" onclick="toggleTask({{ task.id }})" aria-label="Toggle completion">
+                    <button class="task-toggle-btn" onclick="toggleTask({{ task.id }})" aria-label="Toggle task status">
                         ✓
                     </button>
 
                     <div class="task-info">
-                        <div class="task-title">
-                            {{ task.title }}
-                        </div>
+                        <div class="task-title">{{ task.title }}</div>
                         <div class="task-meta">
-                            {% if task.subject %}<span class="task-subject-badge">{{ task.subject }}</span>{% endif %}
-                            <span>⏱ {{ task.estimated_minutes }} min</span> ·
-                            <span class="{% if overdue %}overdue-text{% endif %}">
-                                📅 {% if task.completed %}Completed{% else %}Due: {{ task.due_date or 'No date' }}{% if task.due_time %} at {{ task.due_time }}{% endif %}{% endif %}
+                            {% if task.subject %}<span class="badge-pill task-subject-badge">{{ task.subject }}</span>{% endif %}
+                            <span class="badge-pill">⏱ {{ task.estimated_minutes }}m</span>
+                            <span class="badge-pill {% if overdue %}overdue-text{% endif %}">
+                                📅 {% if task.completed %}Completed{% else %}{{ task.due_date or 'No date' }}{% if task.due_time %} {{ task.due_time }}{% endif %}{% endif %}
                             </span>
                             {% if task.subtasks %}
-                            · <span class="subtask-count-badge">🌿 {{ task.subtasks|length }} subtask{% if task.subtasks|length > 1 %}s{% endif %}</span>
+                            <span class="badge-pill">🌿 {{ task.subtasks|length }} subtask{% if task.subtasks|length > 1 %}s{% endif %}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -109,13 +107,13 @@
                 </div>
             </div>
 
-            <!-- Inline Subtask Creation Input -->
+            <!-- Inline Subtask Input Form -->
             <div id="inlineSubtaskForm-{{ task.id }}" class="inline-subtask-form">
-                <input type="text" id="inlineSubtaskInput-{{ task.id }}" class="glass-input inline-subtask-input" placeholder="Subtask title (e.g. 'Draft section 1 p2')..." onkeydown="handleInlineSubtaskKey(event, {{ task.id }})">
+                <input type="text" id="inlineSubtaskInput-{{ task.id }}" class="glass-input inline-subtask-input" placeholder="Enter subtask title..." onkeydown="handleInlineSubtaskKey(event, {{ task.id }})">
                 <button class="glass-btn primary" onclick="submitInlineSubtask({{ task.id }})">Add</button>
             </div>
 
-            <!-- Recursive Subtask Nesting Tree -->
+            <!-- Subtask Tree Render -->
             {% if task.subtasks %}
             <div class="subtask-tree">
                 {% for subtask in task.subtasks %}
@@ -171,15 +169,15 @@
         </section>
     </main>
 
-    <!-- Add/Edit Task Modal -->
+    <!-- Refined Form Modal -->
     <div id="taskModal" class="modal-overlay">
-        <div class="modal-content glass-card">
+        <div class="modal-content">
             <button class="modal-close" onclick="closeModal()" aria-label="Close modal">&times;</button>
-            <h2 id="modalHeaderTitle">Add New Task</h2>
+            <h2 id="modalHeaderTitle">Task Details</h2>
             <form id="addTaskForm">
                 <input type="hidden" id="modalTaskId" name="task_id" value="">
                 <div class="form-group">
-                    <label for="modalTaskName">Task Name</label>
+                    <label for="modalTaskName">Task Title</label>
                     <input type="text" id="modalTaskName" class="glass-input" name="title" placeholder="e.g., Read Chapter 4 p1 tomorrow" required maxlength="255">
                 </div>
                 <div class="form-group">
@@ -198,11 +196,11 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="modalEstMinutes">Est. Minutes</label>
+                        <label for="modalEstMinutes">Est. Duration (Mins)</label>
                         <input type="number" id="modalEstMinutes" class="glass-input" name="estimated_minutes" min="1" max="1440" value="30" required>
                     </div>
                     <div class="form-group">
-                        <label for="modalPriority">Priority</label>
+                        <label for="modalPriority">Priority Level</label>
                         <select id="modalPriority" class="glass-input" name="priority" required>
                             <option value="1">High Priority (P1)</option>
                             <option value="2" selected>Medium Priority (P2)</option>
