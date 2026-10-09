@@ -616,7 +616,6 @@ def calendar_page():
                  WHERE e.planner_task_id = pt.id AND e.is_deleted = 0
             )
           ORDER BY due_date ASC, priority ASC""",
-,
         (user_id,),
     ).fetchall()
     return render_template("calendar.html", tasks=[dict(row) for row in rows])
