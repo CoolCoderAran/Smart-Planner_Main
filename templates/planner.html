@@ -19,69 +19,6 @@
 
 {% include 'navbar.html' %}
 
-<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
-<aside id="sidebar" class="sidebar glass-card">
-    <div class="sidebar-header">
-        <h3>Menu</h3>
-        <button class="close-btn" onclick="toggleSidebar()" aria-label="Close menu">&times;</button>
-    </div>
-    <div class="sidebar-nav">
-       <!-- Repurposed Sidebar Drawer: Productivity Tools Panel -->
-<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
-<aside id="sidebar" class="sidebar glass-card">
-    <div class="sidebar-header">
-        <h3>⚡ Planner Tools</h3>
-        <button class="close-btn" onclick="toggleSidebar()" aria-label="Close drawer">&times;</button>
-    </div>
-    
-    <div class="sidebar-content">
-        <!-- Quick Stats Section -->
-        <div class="drawer-section">
-            <span class="drawer-label">Today's Progress</span>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-value" id="statTodayCount">0</span>
-                    <span class="stat-title">Remaining Today</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-value" id="statOverdueCount">0</span>
-                    <span class="stat-title">Overdue</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Smart Actions -->
-        <div class="drawer-section">
-            <span class="drawer-label">Quick Actions</span>
-            <button class="drawer-action-btn" onclick="quickShiftOverdueToToday()">
-                📅 Shift Overdue to Today
-            </button>
-            <button class="drawer-action-btn" onclick="quickClearCompleted()">
-                🧹 Archive Completed Tasks
-            </button>
-        </div>
-
-        <!-- System Actions -->
-        <div class="drawer-section drawer-footer">
-            <form action="/logout" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="drawer-logout-btn">🚪 Logout</button>
-            </form>
-        </div>
-    </div>
-</aside>
-
-<!-- Main Toolbar -->
-<div class="toolbar-row">
-    <button class="open-btn glass-btn" onclick="toggleSidebar()">⚡ Tools</button>
-    <div class="search-bar">
-        <input id="search" type="search" placeholder="🔍 Search or quick-add (e.g., 'Submit report p1 tomorrow')..." aria-label="Search tasks">
-    </div>
-    <button class="add-task-btn glass-btn primary" onclick="openModal()">+ Add Task</button>
-</div>
-        </form>
-    </div>
-</aside>
 
 <div id="mainContent" class="main-container">
     <header class="planner-header">
