@@ -1,108 +1,81 @@
-/* Smart Planner Calendar — task-aware, accessible month/week/day calendar. */
-let currentView = "month";
+/* ==========================================================================
+   SMART PLANNER CALENDAR ENGINE
+   Full bidirectional integration with planner.py backend and planner.js
+   ========================================================================== */
+
+let currentView = "month"; // Options: "month" | "week" | "day"
 let currentDate = new Date();
 
-if (Number.isFinite(Number(window.currentYear)) &&
-    Number.isFinite(Number(window.currentMonth)) &&
-    Number(window.currentYear) > 0 &&
-    Number(window.currentMonth) >= 1 &&
-    Number(window.currentMonth) <= 12) {
-    currentDate = new Date(Number(window.currentYear), Number(window.currentMonth) - 1, 1);
+// Respect server-injected year and month if provided
+if (typeof currentYear !== "undefined" && typeof currentMonth !== "undefined" && currentYear && currentMonth) {
+    currentDate = new Date(Number(currentYear), Number(currentMonth) - 1, 1);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", function () {
     updateCalendarView();
 
-    document.querySelectorAll(".view-btn").forEach(button => {
-        button.addEventListener("click", () => {
-            document.querySelectorAll(".view-btn").forEach(item => item.classList.remove("active"));
-            button.classList.add("active");
-            currentView = button.dataset.view || "month";
+    // View Picker Buttons
+    const viewBtns = document.querySelectorAll(".view-btn");
+    viewBtns.forEach(btn => {
+        btn.addEventListener("click", function () {
+            viewBtns.forEach(b => b.classList.remove("active"));
+            this.classList.add("active");
+            currentView = this.dataset.view || "month";
             updateCalendarView();
         });
     });
 
+    // Navigation Buttons
     document.getElementById("prevMonthBtn")?.addEventListener("click", () => navigate(-1));
     document.getElementById("nextMonthBtn")?.addEventListener("click", () => navigate(1));
     document.getElementById("todayBtn")?.addEventListener("click", () => {
         currentDate = new Date();
         updateCalendarView();
     });
+
+    // Google Calendar Sync Button
     document.getElementById("gcalSyncBtn")?.addEventListener("click", syncGoogleCalendar);
 
-    document.getElementById("addTaskForm")?.addEventListener("submit", async event => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const data = new FormData(form);
-        const taskId = String(data.get("id") || "").trim();
-        const payload = {
-            title: String(data.get("title") || "").trim(),
-            subject: String(data.get("subject") || "").trim(),
-            due_date: String(data.get("due_date") || ""),
-            due_time: String(data.get("due_time") || "23:59"),
-            estimated_minutes: Number(data.get("estimated_minutes") || 30),
-            priority: normalizePriority(data.get("priority"))
-        };
-
-        if (!payload.title) {
-            showCalendarMessage("Enter a task title before saving.", true);
-            return;
-        }
-
-        const submit = form.querySelector('[type="submit"]');
-        if (submit) submit.disabled = true;
-        try {
-            await apiRequest(taskId ? `/planner/update/${encodeURIComponent(taskId)}` : "/planner/add",
-                "POST", payload);
-            closeModal();
-            window.location.reload();
-        } catch (error) {
-            showCalendarMessage(error.message || "Unable to save this task.", true);
-        } finally {
-            if (submit) submit.disabled = false;
-        }
-    });
-
+    // Escape Key Handler for Modals
     document.addEventListener("keydown", event => {
         if (event.key === "Escape") {
-            closeModal();
             closeCalendarModal();
+            if (typeof closeModal === "function") closeModal();
         }
     });
 });
 
+// Navigation helper across Month/Week/Day views
 function navigate(direction) {
-    if (currentView === "month") currentDate.setMonth(currentDate.getMonth() + direction);
-    else if (currentView === "week") currentDate.setDate(currentDate.getDate() + 7 * direction);
-    else currentDate.setDate(currentDate.getDate() + direction);
+    if (currentView === "month") {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+    } else if (currentView === "week") {
+        currentDate.setDate(currentDate.getDate() + (7 * direction));
+    } else if (currentView === "day") {
+        currentDate.setDate(currentDate.getDate() + direction);
+    }
     updateCalendarView();
 }
 
-function formatDateISO(value) {
-    if (!value) return "";
-    if (value instanceof Date) {
-        return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+// Safely format dates to YYYY-MM-DD
+function formatDateISO(d) {
+    if (!d) return "";
+    if (typeof d === "string") return d.split("T")[0].split(" ")[0];
+    if (d instanceof Date) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
-    return String(value).trim().split("T")[0].split(" ")[0];
+    return "";
 }
 
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[char]);
-}
-
-function normalizePriority(value) {
-    if (typeof value === "number" || /^\d+$/.test(String(value ?? ""))) {
-        const number = Number(value);
-        return number === 1 ? 1 : number === 3 ? 3 : 2;
-    }
-    const normalized = String(value || "").toLowerCase();
-    return normalized === "high" ? 1 : normalized === "low" ? 3 : 2;
-}
-
-function priorityName(value) {
-    return ({ 1: "High", 2: "Medium", 3: "Low" })[normalizePriority(value)];
+// Normalize numeric priorities (1=High, 2=Medium, 3=Low)
+function normalizePriority(p) {
+    const num = Number(p);
+    if (num === 1) return { name: "High", class: "priority-high" };
+    if (num === 3) return { name: "Low", class: "priority-low" };
+    return { name: "Medium", class: "priority-medium" };
 }
 
 function getCalendarTasks() {
@@ -110,15 +83,16 @@ function getCalendarTasks() {
 }
 
 function getCalendarToday() {
-    return typeof serverToday !== "undefined" && serverToday ? serverToday : new Date();
+    return typeof serverToday !== "undefined" && serverToday ? serverToday : formatDateISO(new Date());
 }
 
+// Core View Switcher
 function updateCalendarView() {
     const grid = document.getElementById("calendarGrid");
     const display = document.getElementById("currentMonthYearDisplay");
     if (!grid) return;
 
-    grid.replaceChildren();
+    grid.innerHTML = "";
     grid.className = `calendar-grid view-${currentView}`;
 
     const weekdays = document.querySelector(".calendar-weekdays");
@@ -126,208 +100,234 @@ function updateCalendarView() {
 
     if (currentView === "month") renderMonthView(grid, display);
     else if (currentView === "week") renderWeekView(grid, display);
-    else renderDayView(grid, display);
+    else if (currentView === "day") renderDayView(grid, display);
 }
 
+// Render Month View
 function renderMonthView(grid, display) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    if (display) display.textContent = currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                        "July", "August", "September", "October", "November", "December"];
+    
+    if (display) display.textContent = `${monthNames[month]} ${year}`;
 
-    const firstDay = new Date(year, month, 1).getDay();
+    const firstDayIndex = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    for (let i = 0; i < firstDay; i++) {
-        const blank = document.createElement("div");
-        blank.className = "calendar-day empty";
-        blank.setAttribute("aria-hidden", "true");
-        grid.appendChild(blank);
+    for (let i = 0; i < firstDayIndex; i++) {
+        const emptyCell = document.createElement("div");
+        emptyCell.classList.add("calendar-day", "empty");
+        grid.appendChild(emptyCell);
     }
+
     for (let day = 1; day <= daysInMonth; day++) {
-        grid.appendChild(createDayCell(new Date(year, month, day), false));
+        const dayDate = new Date(year, month, day);
+        grid.appendChild(createDayCell(day, formatDateISO(dayDate)));
     }
 }
 
+// Render Week View
 function renderWeekView(grid, display) {
-    const start = new Date(currentDate);
-    start.setDate(start.getDate() - start.getDay());
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+
     if (display) {
-        display.textContent = `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+        display.textContent = `${startOfWeek.toLocaleDateString('default', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}`;
     }
-    for (let offset = 0; offset < 7; offset++) {
-        const date = new Date(start);
-        date.setDate(start.getDate() + offset);
-        grid.appendChild(createDayCell(date, true));
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startOfWeek);
+        dayDate.setDate(startOfWeek.getDate() + i);
+        grid.appendChild(createDayCell(dayDate.getDate(), formatDateISO(dayDate), true));
     }
 }
 
+// Render Day View
 function renderDayView(grid, display) {
-    if (display) display.textContent = currentDate.toLocaleDateString(undefined, {
-        weekday: "long", month: "long", day: "numeric", year: "numeric"
-    });
-    grid.appendChild(createDayCell(new Date(currentDate), true));
+    const dateISO = formatDateISO(currentDate);
+    if (display) {
+        display.textContent = currentDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    const dayCell = createDayCell(currentDate.getDate(), dateISO, true);
+    dayCell.classList.add("single-day-view");
+    grid.appendChild(dayCell);
 }
 
-function createDayCell(date, showWeekday) {
-    const dateISO = formatDateISO(date);
-    const cell = document.createElement("section");
-    cell.className = "calendar-day";
-    cell.dataset.date = dateISO;
-    cell.setAttribute("aria-label", date.toLocaleDateString(undefined, {
-        weekday: "long", month: "long", day: "numeric", year: "numeric"
-    }));
+// Construct Individual Day Cells with Task Badges and Workload Tag
+function createDayCell(dayNumber, dateISO, showWeekdayLabel = false) {
+    const dayCell = document.createElement("div");
+    dayCell.classList.add("calendar-day");
+    dayCell.dataset.date = dateISO;
+    const todayISO = getCalendarToday();
+    if (dateISO === todayISO) dayCell.classList.add("today");
 
-    if (dateISO === formatDateISO(getCalendarToday())) cell.classList.add("today");
+    let headerHTML = `<span class="day-number">${dayNumber}</span>`;
+    if (showWeekdayLabel) {
+        const d = new Date(dateISO + "T00:00:00");
+        const weekday = d.toLocaleDateString('default', { weekday: 'short' });
+        headerHTML = `<span class="weekday-label">${weekday}</span> ` + headerHTML;
+    }
 
-    cell.addEventListener("dragover", event => {
-        if (event.dataTransfer?.types.includes("text/plain")) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-            cell.classList.add("drag-over");
-        }
+    const matchingTasks = getCalendarTasks().filter(t => {
+        if (!t.due_date || t.is_deleted) return false;
+        return formatDateISO(t.due_date) === dateISO;
     });
-    cell.addEventListener("dragleave", event => {
-        if (!cell.contains(event.relatedTarget)) cell.classList.remove("drag-over");
-    });
-    cell.addEventListener("drop", async event => {
+
+    const pendingTasks = matchingTasks.filter(t => !t.completed);
+    const totalMinutes = pendingTasks.reduce((acc, t) => acc + (parseInt(t.estimated_minutes) || 0), 0);
+
+    let workloadHTML = "";
+    if (totalMinutes > 0) {
+        const loadClass = totalMinutes > 120 ? "heavy" : (totalMinutes > 60 ? "moderate" : "light");
+        workloadHTML = `<span class="workload-tag ${loadClass}">${totalMinutes}m</span>`;
+    }
+
+    dayCell.innerHTML = `
+        <div class="day-header">
+            ${headerHTML}
+            ${workloadHTML}
+        </div>
+        <div class="day-tasks"></div>
+    `;
+
+    // Drag and Drop Event Listeners for Rescheduling Tasks
+    dayCell.addEventListener("dragover", event => {
         event.preventDefault();
-        cell.classList.remove("drag-over");
+        dayCell.classList.add("drag-over");
+    });
+    dayCell.addEventListener("dragleave", event => {
+        if (!dayCell.contains(event.relatedTarget)) dayCell.classList.remove("drag-over");
+    });
+    dayCell.addEventListener("drop", async event => {
+        event.preventDefault();
+        dayCell.classList.remove("drag-over");
         const taskId = event.dataTransfer?.getData("text/plain");
         if (taskId) await updateTaskDeadline(taskId, dateISO);
     });
-    cell.addEventListener("dblclick", () => openModalForDate(dateISO));
 
-    const header = document.createElement("div");
-    header.className = "day-header";
-    const dayLabel = document.createElement("span");
-    dayLabel.className = "day-number";
-    dayLabel.textContent = showWeekday
-        ? `${date.toLocaleDateString(undefined, { weekday: "short" })} ${date.getDate()}`
-        : String(date.getDate());
-    header.appendChild(dayLabel);
-
-    const matchingTasks = getCalendarTasks()
-        .filter(task => formatDateISO(task.due_date) === dateISO);
-    const pendingMinutes = matchingTasks
-        .filter(task => !task.completed)
-        .reduce((total, task) => total + (Number(task.estimated_minutes) || 0), 0);
-
-    if (pendingMinutes > 0) {
-        const load = document.createElement("span");
-        load.className = `workload-tag ${pendingMinutes > 120 ? "heavy" : pendingMinutes > 60 ? "moderate" : "light"}`;
-        load.textContent = `${pendingMinutes}m`;
-        load.title = `${pendingMinutes} minutes of pending work`;
-        header.appendChild(load);
-    }
-    cell.appendChild(header);
-
-    const tasks = document.createElement("div");
-    tasks.className = "day-tasks";
-    matchingTasks.forEach(task => {
-        const badge = document.createElement("button");
-        badge.type = "button";
-        badge.draggable = true;
-        const priority = normalizePriority(task.priority);
-        badge.className = `calendar-task-badge priority-${priorityName(priority).toLowerCase()}`;
-        if (task.completed) badge.classList.add("completed");
-        badge.dataset.taskId = String(task.id);
-        badge.title = `${task.title} — ${task.completed ? "Completed" : "Pending"}. Click to edit; drag to reschedule.`;
-        badge.innerHTML = `<span class="badge-title">${escapeHTML(task.title)}</span><span class="badge-time">${Number(task.estimated_minutes) || 30}m</span>`;
-        badge.addEventListener("dragstart", event => {
-            event.dataTransfer.setData("text/plain", String(task.id));
-            event.dataTransfer.effectAllowed = "move";
-            badge.classList.add("is-dragging");
-        });
-        badge.addEventListener("dragend", () => badge.classList.remove("is-dragging"));
-        badge.addEventListener("click", () => openCalendarTaskModal(task));
-        tasks.appendChild(badge);
+    // Double-click cell to create new task with pre-filled due date
+    dayCell.addEventListener("dblclick", () => {
+        if (typeof openModal === "function") {
+            openModal();
+            const dueInput = document.getElementById("modalDueDate");
+            if (dueInput) dueInput.value = dateISO;
+        }
     });
-    cell.appendChild(tasks);
-    return cell;
+
+    const tasksContainer = dayCell.querySelector(".day-tasks");
+
+    matchingTasks.forEach(task => {
+        const taskBadge = document.createElement("button");
+        taskBadge.type = "button";
+        taskBadge.draggable = true;
+        const isOverdue = !task.completed && dateISO < todayISO;
+        const prioInfo = normalizePriority(task.priority);
+
+        taskBadge.className = `calendar-task-badge ${prioInfo.class}`;
+        if (task.completed) taskBadge.classList.add("completed");
+        if (isOverdue) taskBadge.classList.add("overdue");
+
+        taskBadge.innerHTML = `
+            <span class="badge-title">${isOverdue ? '⚠️ ' : ''}${escapeHTML(task.title)}</span>
+            <span class="badge-time">${task.estimated_minutes || 30}m</span>
+        `;
+
+        taskBadge.addEventListener("dragstart", event => {
+            event.dataTransfer.setData("text/plain", String(task.id));
+            taskBadge.classList.add("is-dragging");
+        });
+        taskBadge.addEventListener("dragend", () => taskBadge.classList.remove("is-dragging"));
+
+        taskBadge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openCalendarTaskModal(task);
+        });
+
+        tasksContainer.appendChild(taskBadge);
+    });
+
+    return dayCell;
 }
 
+// Drag & Drop Reschedule API Request
 async function updateTaskDeadline(taskId, newDateISO) {
-    const task = getCalendarTasks()
-        .find(item => String(item.id) === String(taskId));
-    if (!task) {
-        showCalendarMessage("That task could not be found. Refresh the calendar and try again.", true);
-        return;
-    }
-    if (formatDateISO(task.due_date) === newDateISO) return;
+    const task = getCalendarTasks().find(t => String(t.id) === String(taskId));
+    if (!task || formatDateISO(task.due_date) === newDateISO) return;
 
     try {
         await apiRequest(`/planner/update/${encodeURIComponent(taskId)}`, "POST", {
-            title: String(task.title || "").trim(),
+            title: task.title,
             subject: task.subject || "",
             due_date: newDateISO,
             due_time: task.due_time || "23:59",
             estimated_minutes: Number(task.estimated_minutes) || 30,
-            priority: normalizePriority(task.priority)
+            priority: task.priority || 2
         });
         window.location.reload();
     } catch (error) {
-        showCalendarMessage(error.message || "Could not move this task.", true);
+        alert(error.message || "Failed to reschedule task.");
     }
 }
 
-function openModalForDate(dateISO) {
-    if (typeof window.openModal !== "function") {
-        showCalendarMessage("The task editor is unavailable on this page.", true);
-        return;
-    }
-    window.openModal();
-    const dueDate = document.getElementById("modalDueDate");
-    if (dueDate) dueDate.value = dateISO;
-}
-
+// Task Inspection Modal Handler
 function openCalendarTaskModal(task) {
     const modal = document.getElementById("calendarTaskModal");
-    if (!modal) {
-        editTaskFromCalendar(task);
-        return;
-    }
-    document.getElementById("calModalTitle").textContent = task.title || "Untitled task";
+    if (!modal) return;
+
+    const prioInfo = normalizePriority(task.priority);
+
+    document.getElementById("calModalTitle").textContent = task.title || "Untitled Task";
     document.getElementById("calModalSubject").textContent = task.subject || "General";
-    document.getElementById("calModalDueDate").textContent = formatDateISO(task.due_date) || "Not scheduled";
-    document.getElementById("calModalPriority").textContent = priorityName(task.priority);
-    document.getElementById("calModalEst").textContent = String(Number(task.estimated_minutes) || 30);
+    document.getElementById("calModalDueDate").textContent = formatDateISO(task.due_date) || "None";
+    document.getElementById("calModalPriority").textContent = `${prioInfo.name} (P${task.priority || 2})`;
+    document.getElementById("calModalEst").textContent = task.estimated_minutes || 30;
     document.getElementById("calModalStatus").textContent = task.completed ? "Completed" : "Pending";
 
-    const edit = document.getElementById("calEditBtn");
-    const toggle = document.getElementById("calToggleBtn");
-    const remove = document.getElementById("calDeleteBtn");
-    if (edit) edit.onclick = () => { closeCalendarModal(); editTaskFromCalendar(task); };
-    if (toggle) toggle.onclick = async () => {
-        try {
-            await apiRequest(`/planner/toggle/${encodeURIComponent(task.id)}`, "POST");
-            window.location.reload();
-        } catch (error) { showCalendarMessage(error.message, true); }
-    };
-    if (remove) remove.onclick = async () => {
-        if (!window.confirm("Delete this task?")) return;
-        try {
-            await apiRequest(`/planner/delete/${encodeURIComponent(task.id)}`, "DELETE");
-            window.location.reload();
-        } catch (error) { showCalendarMessage(error.message, true); }
-    };
+    const editBtn = document.getElementById("calEditBtn");
+    const toggleBtn = document.getElementById("calToggleBtn");
+    const deleteBtn = document.getElementById("calDeleteBtn");
+
+    if (editBtn) {
+        editBtn.onclick = () => {
+            closeCalendarModal();
+            if (typeof editTask === "function") {
+                editTask(task.id, task.title, task.subject, task.estimated_minutes, task.priority, formatDateISO(task.due_date), task.due_time);
+            }
+        };
+    }
+
+    if (toggleBtn) {
+        toggleBtn.onclick = async () => {
+            try {
+                await apiRequest(`/planner/toggle/${encodeURIComponent(task.id)}`, "POST");
+                closeCalendarModal();
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+            }
+        };
+    }
+
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            if (!confirm("Are you sure you want to delete this task?")) return;
+            try {
+                await apiRequest(`/planner/delete/${encodeURIComponent(task.id)}`, "DELETE");
+                closeCalendarModal();
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+            }
+        };
+    }
+
     modal.classList.add("active", "open");
     modal.style.display = "flex";
-}
-
-function editTaskFromCalendar(task) {
-    if (typeof window.editTask !== "function") {
-        showCalendarMessage("The task editor is unavailable on this page.", true);
-        return;
-    }
-    window.editTask(
-        task.id, task.title || "", task.subject || "",
-        Number(task.estimated_minutes) || 30,
-        normalizePriority(task.priority),
-        formatDateISO(task.due_date),
-        task.due_time || "23:59"
-    );
 }
 
 function closeCalendarModal() {
@@ -338,20 +338,13 @@ function closeCalendarModal() {
     }
 }
 
-function showCalendarMessage(message, isError = false) {
-    let region = document.getElementById("calendar-message");
-    if (!region) {
-        region = document.createElement("div");
-        region.id = "calendar-message";
-        region.className = "calendar-message";
-        region.setAttribute("role", "status");
-        region.setAttribute("aria-live", "polite");
-        document.querySelector(".calendar-page-wrapper")?.prepend(region);
-    }
-    region.textContent = message;
-    region.classList.toggle("is-error", Boolean(isError));
+function escapeHTML(str) {
+    return String(str || "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[c]);
 }
 
+// Optional Google Calendar Sync API
 async function syncGoogleCalendar() {
     const button = document.getElementById("gcalSyncBtn");
     if (!button) return;
@@ -360,16 +353,12 @@ async function syncGoogleCalendar() {
     button.textContent = "Syncing…";
     try {
         const response = await apiRequest("/api/calendar/google/sync", "POST");
-        button.textContent = "Synced";
-        window.alert(`Google Calendar synced successfully.\n\nImported: ${response.pulled ?? 0}\nExported: ${response.pushed ?? 0}`);
+        alert(`Google Calendar synced!\nImported: ${response.pulled ?? 0}\nExported: ${response.pushed ?? 0}`);
         window.location.reload();
     } catch (error) {
-        button.textContent = originalText;
-        showCalendarMessage(error.message || "Google Calendar sync failed.", true);
+        alert(error.message || "Google Calendar sync failed.");
     } finally {
         button.disabled = false;
-        if (button.textContent === "Synced") {
-            window.setTimeout(() => { button.textContent = originalText; }, 2000);
-        }
+        button.textContent = originalText;
     }
 }
