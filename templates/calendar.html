@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="modern">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendar • Smart Planner</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <!-- CSS Load Order: Core Design System First -->
     <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='planner.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
@@ -17,26 +18,24 @@
     <div class="main-content calendar-page-wrapper">
         <!-- CALENDAR HEADER & CONTROLS -->
         <header class="calendar-header">
-    <div class="calendar-nav-controls">
-        <button id="prevMonthBtn" class="nav-btn">&larr; Previous</button>
-        <h2 id="currentMonthYearDisplay"></h2>
-        <button id="nextMonthBtn" class="nav-btn">Next &rarr;</button>
-        <button id="todayBtn" class="today-btn">Today</button>
-    </div>
+            <div class="calendar-nav-controls">
+                <button id="prevMonthBtn" class="nav-btn">&larr; Previous</button>
+                <h2 id="currentMonthYearDisplay"></h2>
+                <button id="nextMonthBtn" class="nav-btn">Next &rarr;</button>
+                <button id="todayBtn" class="today-btn">Today</button>
+            </div>
 
-    <div style="display: flex; gap: 0.75rem; align-items: center;">
-        <button id="gcalSyncBtn" class="glass-btn gcal-sync-btn">
-            📅 Sync Google Calendar
-        </button>
-        <div class="calendar-view-picker">
-            <button class="view-btn active" data-view="month">Month</button>
-            <button class="view-btn" data-view="week">Week</button>
-            <button class="view-btn" data-view="day">Day</button>
-        </div>
-    </div>
-</header>
-        
-
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <button id="gcalSyncBtn" class="glass-btn gcal-sync-btn">
+                    📅 Sync Google Calendar
+                </button>
+                <div class="calendar-view-picker">
+                    <button class="view-btn active" data-view="month">Month</button>
+                    <button class="view-btn" data-view="week">Week</button>
+                    <button class="view-btn" data-view="day">Day</button>
+                </div>
+            </div>
+        </header>
 
         <!-- CALENDAR GRID CONTAINER -->
         <main class="calendar-container glass-card">
@@ -66,7 +65,7 @@
       </div>
     </div>
 
-    <!-- Edit/Add Task Modal (Matches backend endpoint inputs exactly) -->
+    <!-- Edit/Add Task Modal -->
     <div id="taskModal" class="modal-overlay">
         <div class="modal-content glass-card">
             <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -88,12 +87,11 @@
                     </div>
                     <div class="form-group">
                         <label for="modalPriority">Priority</label>
-                       <select id="modalPriority" name="priority" class="glass-input">
-    <option value="3">Low</option>
-    <option value="2" selected>Medium</option>
-    <option value="1">High</option>
-</select>
-
+                        <select id="modalPriority" name="priority" class="glass-input">
+                            <option value="3">Low</option>
+                            <option value="2" selected>Medium</option>
+                            <option value="1">High</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-group">
@@ -103,9 +101,8 @@
                 
                 <div class="form-group">
                     <label for="modalDueTime">Due Time</label>
-                    <input type="time" id="modalDueTime" name="due_time"
-                       class="glass-input" value="23:59">
-                    </div>
+                    <input type="time" id="modalDueTime" name="due_time" class="glass-input" value="23:59">
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel glass-btn" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn-submit glass-btn primary">Save Task</button>
