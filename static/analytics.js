@@ -90,31 +90,29 @@ function renderPriorityChart(priorityDist) {
     });
 }
 
-function renderAchievements(items) {
-    const container = document.getElementById("achievements-container");
-    if (!container) return;
-    container.replaceChildren();
+function renderAchievements(achievements) {
+  const container = document.getElementById('achievements-container');
+  if (!container) return;
+  container.innerHTML = '';
 
-    items.forEach(item => {
-        const card = document.createElement("div");
-        card.className = `achievement-card ${item.unlocked ? "unlocked" : ""}`;
-
-        const icon = document.createElement("div");
-        icon.className = "achievement-icon";
-        icon.textContent = item.unlocked ? "🏆" : "🔒";
-
-        const info = document.createElement("div");
-        info.className = "achievement-info";
-
-        const title = document.createElement("h4");
-        title.textContent = item.name || "Achievement";
-        const description = document.createElement("p");
-        description.textContent = item.desc || "";
-
-        info.append(title, description);
-        card.append(icon, info);
-        container.appendChild(card);
-    });
+  achievements.forEach(item => {
+    const card = document.createElement('div');
+    card.className = `achievement-card ${item.unlocked ? 'unlocked' : 'locked'}`;
+    
+    card.innerHTML = `
+      <div class="achievement-icon">${item.unlocked ? item.icon : '🔒'}</div>
+      <div class="achievement-info">
+        <h4>${escapeHTML(item.name)}</h4>
+        <p>${escapeHTML(item.desc)}</p>
+        ${item.unlocked && item.earned_at ? `<small class="earned-date">Unlocked ${item.earned_at.split('T')[0]}</small>` : '<small class="locked-text">Locked</small>'}
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
-
+function escapeHTML(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
