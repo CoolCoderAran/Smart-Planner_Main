@@ -100,11 +100,14 @@ async function startTimer() {
             if (!isBreak && activeStartedAt) {
                 const startTime = new Date(activeStartedAt).getTime();
                 if (isNaN(startTime)) {
-                    // Fallback local countdown if server timestamp format is invalid
                     secondsRemaining--;
                 } else {
+                    let pausedOffset = activeTotalPausedSeconds;
+                    if (activePausedAt) {
+                        pausedOffset += Math.floor((Date.now() - new Date(activePausedAt).getTime()) / 1000);
+                    }
                     const elapsedRaw = Math.floor((Date.now() - startTime) / 1000);
-                    const elapsed = Math.max(0, elapsedRaw - activeTotalPausedSeconds);
+                    const elapsed = Math.max(0, elapsedRaw - pausedOffset);
                     secondsRemaining = Math.max(0, (getFocusMinutes() * 60) - elapsed);
                 }
             } else {
@@ -187,7 +190,7 @@ async function sessionFinished() {
     if (!activeSessionId) return;
 
     try {
-        const data = await postJSON("/focus/complete", {
+        await postJSON("/focus/complete", {
             session_id: activeSessionId,
             note: document.getElementById("brainDumpNotes")?.value || ""
         });
@@ -293,7 +296,6 @@ function switchTab(tabName) {
     document.getElementById(tabName === "history" ? "tabHistory" : "tabNotes")?.classList.add("active");
 }
 
-// Focus notes persistence
 let _notesSaveTimer = null;
 
 async function loadFocusNotes() {
@@ -329,7 +331,7 @@ function initFocusNotes() {
     });
 }
 
-// Ambient audio
+// Ambient audio handler
 let activeAudio = null;
 let activeBtn = null;
 
@@ -357,7 +359,7 @@ function toggleAudio(btnElement, type) {
     activeBtn = btnElement;
 }
 
-// Session history
+// Session history loader
 async function loadHistory() {
     try {
         const response = await fetch("/get_recent_sessions");
@@ -391,7 +393,6 @@ async function loadHistory() {
     }
 }
 
-// Event Listeners setup
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("modeSelect")?.addEventListener("change", loadMode);
     document.getElementById("customFocus")?.addEventListener("input", loadMode);
