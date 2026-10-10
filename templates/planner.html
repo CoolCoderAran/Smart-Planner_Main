@@ -82,12 +82,16 @@
                     </div>
                 </div>
 
-                <div class="task-actions">
-                    <button class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
-                    <button class="glass-btn" onclick="editTask({{ task.id }}, {{ task.title|tojson }}, {{ (task.subject or '')|tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority }}, {{ (task.due_date or '')|tojson }}, {{ (task.due_time or '')|tojson }})">Edit</button>
-                    <button class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
-                </div>
-            </div>
+               <div class="task-actions">
+    <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
+
+    <button type="button" class="glass-btn" 
+            onclick="editTask({{ task.id }}, '{{ task.title | replace("'", "\\'") }}', '{{ (task.subject or '') | replace("'", "\\'") }}', {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, '{{ task.due_date or '' }}', '{{ task.due_time or '' }}')">
+        Edit
+    </button>
+
+    <button type="button" class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
+</div>
 
             <!-- Inline Subtask Input Form -->
             <div id="inlineSubtaskForm-{{ task.id }}" class="inline-subtask-form">
