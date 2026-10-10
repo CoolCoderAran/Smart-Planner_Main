@@ -158,13 +158,17 @@
             <h3>Ambient Sounds</h3>
             <p class="ambient-sub">Select background audio for concentration</p>
             
+            <div class="glass-card ambient-card">
+            <h3>Ambient Sounds</h3>
+            <p class="ambient-sub">Select background audio for concentration</p>
+            
             <div class="ambient-grid">
-                <button class="ambient-btn" onclick="toggleAudio('rain')"><span class="ambient-icon">📻</span><span>Pink Noise</span></button>
-                <button class="ambient-btn" onclick="toggleAudio('lofi')"><span class="ambient-icon">🤎</span><span>Brown Noise</span></button>
-                <button class="ambient-btn" onclick="toggleAudio('waves')"><span class="ambient-icon">🌧️</span><span>Rainstorm</span></button>
-                <button class="ambient-btn" onclick="toggleAudio('forest')"><span class="ambient-icon">☕</span><span>Café</span></button>
-                <button class="ambient-btn" onclick="toggleAudio('cafe')"><span class="ambient-icon">🔥</span><span>Fireplace</span></button>
-                <button class="ambient-btn" onclick="toggleAudio('fire')"><span class="ambient-icon">🧠</span><span>Beta Waves</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'rain')"><span class="ambient-icon">📻</span><span>Pink Noise</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'lofi')"><span class="ambient-icon">🤎</span><span>Brown Noise</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'waves')"><span class="ambient-icon">🌧️</span><span>Rainstorm</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'forest')"><span class="ambient-icon">☕</span><span>Café</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'cafe')"><span class="ambient-icon">🔥</span><span>Fireplace</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'fire')"><span class="ambient-icon">🧠</span><span>Beta Waves</span></button>
             </div>
 
             <audio id="audioRain" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
@@ -174,7 +178,6 @@
             <audio id="audioCafe" loop src="https://archive.org/download/FireplaceCrackle1HourLoop/FireplaceCrackle.mp3"></audio>
             <audio id="audioFire" loop src="https://archive.org/download/BinauralBeatsAlphaBetaThetaDelta_201804/Beta_14Hz_Focus.mp3"></audio>
         </div>
-    </section>
         
     <script src="{{ url_for('static', filename='study.js') }}"></script>
 </body>
