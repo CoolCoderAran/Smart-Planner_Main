@@ -163,7 +163,35 @@ def study():
             else 5
         ),
     )
+@focus_bp.route("/focus/active", methods=["GET"])
+def get_active_focus_session():
+    user_id = get_authenticated_user_id()
+    if user_id is None:
+        return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
+    conn = db.get_db()
+    row = conn.execute(
+        """SELECT id, started_at, paused_at, total_paused_seconds, mode, task_id
+             FROM focus_sessions
+            WHERE user_id = ? AND status = 'active'
+            LIMIT 1""",
+        (user_id,),
+    ).fetchone()
+
+    if not row:
+        return jsonify({"active": None})
+
+    return jsonify({
+        "active": {
+            "id": row["id"],
+            "started_at": row["started_at"],
+            "paused_at": row["paused_at"],
+            "total_paused_seconds": row["total_paused_seconds"] or 0,
+            "mode": row["mode"] or "pomodoro",
+            "task_id": row["task_id"]
+        }
+    })
+    
 
 @focus_bp.route("/focus/start", methods=["POST"])
 def start_focus():
