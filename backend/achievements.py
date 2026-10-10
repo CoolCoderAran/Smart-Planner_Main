@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-
 import db
 import streaks
 
@@ -15,15 +14,11 @@ def unlock(conn, user_id, achievement_id):
 
 
 def check_achievements(user_id):
-    """Evaluate every defined achievement for *user_id* and unlock any that
-    have just been earned.  Safe to call repeatedly — awards are idempotent.
-    """
+    """Evaluate all 50 achievement rules for user_id and unlock earned badges."""
     if not user_id:
         return
 
     conn = db.get_db()
-    # Fetch all achievement definitions.  Use named column access so the loop
-    # is robust against schema changes that reorder columns.
     rows = conn.execute(
         "SELECT id, requirement_type, requirement_value FROM achievements"
     ).fetchall()
@@ -34,7 +29,6 @@ def check_achievements(user_id):
             req_type = row["requirement_type"]
             req_value = row["requirement_value"]
 
-            # Skip achievements with no defined rule or threshold.
             if req_type is None or req_value is None:
                 continue
 
@@ -43,67 +37,56 @@ def check_achievements(user_id):
             if req_type == "sessions":
                 unlocked = (
                     conn.execute(
-                        "SELECT COUNT(*) FROM focus_sessions WHERE user_id = ? AND completed_at IS NOT NULL",
+                        "SELECT COUNT(*) FROM focus_sessions WHERE user_id = ? AND status = 'completed'",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "minutes":
                 unlocked = (
                     conn.execute(
-                        "SELECT COALESCE(SUM(duration_minutes), 0) FROM focus_sessions WHERE user_id = ? AND completed_at IS NOT NULL",
+                        "SELECT COALESCE(SUM(duration_minutes), 0) FROM focus_sessions WHERE user_id = ? AND status = 'completed'",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "streak":
                 unlocked = streaks.calculate_streaks(user_id)["current_streak"] >= req_value
 
             elif req_type == "tasks":
-                # Counts all non-deleted tasks for this user.  Checked after
-                # task creation and after task completion so "Getting Started"
-                # (first task) fires as soon as the first task is created.
                 unlocked = (
                     conn.execute(
                         "SELECT COUNT(*) FROM planner_tasks WHERE user_id = ? AND is_deleted = 0",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type in {"pomodoro", "deepwork", "quickburst", "examcrunch"}:
-                # Mode-specific achievements — the mode column exists but we
-                # count only completed sessions with the matching mode string.
                 unlocked = (
                     conn.execute(
                         "SELECT COUNT(*) FROM focus_sessions WHERE user_id = ? AND status = 'completed' AND mode = ?",
                         (user_id, req_type),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "early":
                 unlocked = (
                     conn.execute(
                         """SELECT COUNT(*) FROM focus_sessions
-                           WHERE user_id = ? AND completed_at IS NOT NULL
+                           WHERE user_id = ? AND status = 'completed'
                              AND CAST(strftime('%H', completed_at) AS INTEGER) < 8""",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "night":
                 unlocked = (
                     conn.execute(
                         """SELECT COUNT(*) FROM focus_sessions
-                           WHERE user_id = ? AND completed_at IS NOT NULL
+                           WHERE user_id = ? AND status = 'completed'
                              AND CAST(strftime('%H', completed_at) AS INTEGER) >= 22""",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "dailyminutes":
@@ -112,12 +95,11 @@ def check_achievements(user_id):
                         """SELECT COALESCE(MAX(total), 0) FROM (
                                SELECT SUM(duration_minutes) AS total
                                  FROM focus_sessions
-                                WHERE user_id = ? AND completed_at IS NOT NULL
+                                WHERE user_id = ? AND status = 'completed'
                                 GROUP BY DATE(completed_at)
                            )""",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "dailysessions":
@@ -126,12 +108,11 @@ def check_achievements(user_id):
                         """SELECT COALESCE(MAX(total), 0) FROM (
                                SELECT COUNT(*) AS total
                                  FROM focus_sessions
-                                WHERE user_id = ? AND completed_at IS NOT NULL
+                                WHERE user_id = ? AND status = 'completed'
                                 GROUP BY DATE(completed_at)
                            )""",
                         (user_id,),
-                    ).fetchone()[0]
-                    >= req_value
+                    ).fetchone()[0] >= req_value
                 )
 
             elif req_type == "account_age":
@@ -152,14 +133,16 @@ def check_achievements(user_id):
 
 
 def get_user_achievements(user_id):
+    """Return all 50 achievement definitions with unlocked status and timestamp."""
     rows = db.get_db().execute(
         """SELECT a.id, a.title, a.description, a.icon, ua.earned_at
-           FROM user_achievements ua
-           JOIN achievements a ON ua.achievement_id = a.id
-          WHERE ua.user_id = ?
-          ORDER BY ua.earned_at DESC""",
+           FROM achievements a
+           LEFT JOIN user_achievements ua 
+                  ON a.id = ua.achievement_id AND ua.user_id = ?
+          ORDER BY (ua.earned_at IS NULL) ASC, ua.earned_at DESC, a.id ASC""",
         (user_id,),
     ).fetchall()
+
     return [
         {
             "id": row["id"],
@@ -167,13 +150,7 @@ def get_user_achievements(user_id):
             "desc": row["description"],
             "icon": row["icon"],
             "earned_at": row["earned_at"],
-            "unlocked": True,
+            "unlocked": row["earned_at"] is not None,
         }
         for row in rows
     ]
-
-
-def get_count(user_id):
-    return db.get_db().execute(
-        "SELECT COUNT(*) FROM user_achievements WHERE user_id = ?", (user_id,)
-    ).fetchone()[0]
