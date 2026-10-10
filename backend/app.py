@@ -602,24 +602,38 @@ def privacy():
 
 @app.route("/calendar")
 def calendar_page():
-    if get_authenticated_user_id() is None:
-        return _auth_redirect()
     user_id = get_authenticated_user_id()
-    rows = db.get_db().execute(
-           """SELECT id, title, subject, due_date, due_time,
-                  estimated_minutes, priority, completed
-           FROM planner_tasks pt
-          WHERE pt.user_id = ? AND pt.is_deleted = 0 AND pt.completed = 0
-            AND pt.due_date IS NOT NULL
-            AND NOT EXISTS (
-                SELECT 1 FROM events e
-                 WHERE e.planner_task_id = pt.id AND e.is_deleted = 0
-            )
-          ORDER BY due_date ASC, priority ASC""",
+    if user_id is None:
+        return _auth_redirect()
+
+    user_tz = _get_user_timezone(user_id)
+    now = datetime.now(user_tz)
+    
+    conn = db.get_db()
+    
+    # Query all active, non-deleted top-level planner tasks for the user
+    raw_tasks = conn.execute(
+        """SELECT id, title, subject, due_date, due_time,
+                  estimated_minutes, priority, completed, is_deleted
+           FROM planner_tasks
+          WHERE user_id = ? AND is_deleted = 0 AND parent_id IS NULL
+          ORDER BY completed ASC,
+                   COALESCE(due_date, '9999-12-31') ASC,
+                   priority ASC,
+                   id ASC""",
         (user_id,),
     ).fetchall()
-    return render_template("calendar.html", tasks=[dict(row) for row in rows])
+    
+    tasks = [dict(row) for row in raw_tasks]
+    today_iso = now.date().isoformat()
 
+    return render_template(
+        "calendar.html",
+        tasks=tasks,
+        today_date=today_iso,
+        year=now.year,
+        month=now.month
+    )
 
 # ---------------------------------------------------------------------------
 # Analytics
