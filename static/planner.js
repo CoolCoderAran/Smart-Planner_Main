@@ -2,11 +2,13 @@ let editingTaskId = null;
 let currentFilter = "all";
 const selectedTaskIds = new Set();
 
+// Extract CSRF Token safely from meta tags
 function getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || "";
 }
 
-function apiRequest(url, method = "GET", payload = null) {
+// Universal API fetch wrapper
+async function apiRequest(url, method = "GET", payload = null) {
     const options = {
         method,
         headers: {
@@ -17,11 +19,10 @@ function apiRequest(url, method = "GET", payload = null) {
     };
     if (payload !== null) options.body = JSON.stringify(payload);
 
-    return fetch(url, options).then(async response => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Request failed.");
-        return data;
-    });
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Request failed.");
+    return data;
 }
 
 function toggleSidebar() {
@@ -53,18 +54,19 @@ function closeModal() {
     editingTaskId = null;
 }
 
-function editTask(id, title, subject, minutes, priority, dueDate, dueTime = "") {
+// Safe Task Editing trigger invoked by button click
+function editTask(id, title, subject, minutes, priority, dueDate, dueTime) {
     editingTaskId = id;
     const modal = document.getElementById("taskModal");
     if (!modal) return;
 
     document.getElementById("modalHeaderTitle").textContent = "Edit Task";
-    document.getElementById("modalTaskId").value = id;
-    document.getElementById("modalTaskName").value = title;
-    document.getElementById("modalSubject").value = subject || "";
-    document.getElementById("modalEstMinutes").value = minutes || 30;
-    document.getElementById("modalPriority").value = String(priority || 2);
-    document.getElementById("modalDueDate").value = dueDate || "";
+    document.getElementById("modalTaskId").value = id ?? "";
+    document.getElementById("modalTaskName").value = title ?? "";
+    document.getElementById("modalSubject").value = subject ?? "";
+    document.getElementById("modalEstMinutes").value = minutes ?? 30;
+    document.getElementById("modalPriority").value = String(priority ?? 2);
+    document.getElementById("modalDueDate").value = dueDate ?? "";
     document.getElementById("modalDueTime").value = dueTime || "23:59";
 
     modal.classList.add("active", "open");
@@ -126,8 +128,10 @@ async function submitInlineSubtask(parentId) {
 function toggleTaskSelection(taskId, checkbox) {
     if (checkbox.checked) selectedTaskIds.add(taskId);
     else selectedTaskIds.delete(taskId);
+    
     const count = document.getElementById("selectedCount");
     const bar = document.getElementById("batchBar");
+    
     if (count) count.textContent = `${selectedTaskIds.size} task${selectedTaskIds.size === 1 ? "" : "s"} selected`;
     if (bar) bar.style.display = selectedTaskIds.size ? "flex" : "none";
 }
@@ -208,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Quick Add via search bar on Enter key press
     document.getElementById("search")?.addEventListener("keydown", async e => {
         if (e.key === "Enter" && e.target.value.includes("p")) {
             e.preventDefault();
