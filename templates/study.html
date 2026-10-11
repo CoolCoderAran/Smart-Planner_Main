@@ -26,11 +26,11 @@
                 <div id="timerDisplay">25:00</div>
             </div>
 
+            <!-- DYNAMIC CONTROL BUTTON GROUP -->
             <div class="control-btn-group">
-                <button class="glass-btn primary" onclick="startTimer()">Start</button>
-                <button class="glass-btn" onclick="pauseTimer()">Pause</button>
-                <button class="glass-btn" onclick="resumeTimer()">Resume</button>
-                <button class="glass-btn danger" onclick="resetTimer()">Reset</button>
+                <button id="btnPrimary" class="glass-btn primary" onclick="handlePrimaryAction()">Start Focus</button>
+                <button id="btnPause" class="glass-btn" onclick="pauseTimer()" style="display: none;">Pause</button>
+                <button id="btnEnd" class="glass-btn danger" onclick="resetTimer()" style="display: none;">End Session</button>
             </div>
         </section>
 
@@ -122,58 +122,60 @@
         </div>
     </section>
 
-   <!-- BOTTOM UTILITY SECTION -->
-<section class="study-bottom-section">
-    <!-- SESSION HISTORY & NOTEPAD TAB CARD -->
-    <div class="glass-card bottom-tab-card">
-        <div class="tab-header">
-            <button class="tab-btn active" onclick="switchTab('history')">Session History</button>
-            <button class="tab-btn" onclick="switchTab('notes')">Quick Notepad</button>
-        </div>
+    <!-- BOTTOM UTILITY SECTION -->
+    <section class="study-bottom-section">
+        <div class="glass-card bottom-tab-card">
+            <div class="tab-header">
+                <button class="tab-btn active" onclick="switchTab('history')">Session History</button>
+                <button class="tab-btn" onclick="switchTab('notes')">Quick Notepad</button>
+            </div>
 
-        <div id="tabHistory" class="tab-content active">
-            <div class="table-wrapper">
-                <table class="session-table">
-                    <thead>
-                        <tr>
-                            <th>Task</th>
-                            <th>Mode</th>
-                            <th>Duration</th>
-                            <th>Note</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sessionHistoryBody">
-                        <tr><td colspan="5" class="empty-msg">Loading history...</td></tr>
-                    </tbody>
-                </table>
+            <div id="tabHistory" class="tab-content active">
+                <div class="table-wrapper">
+                    <table class="session-table">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Mode</th>
+                                <th>Duration</th>
+                                <th>Note</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionHistoryBody">
+                            <tr><td colspan="5" class="empty-msg">Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tabNotes" class="tab-content">
+                <textarea id="brainDumpNotes" class="glass-textarea" placeholder="Jot down quick thoughts, ideas, or distractions here... (Auto-saved)"></textarea>
             </div>
         </div>
 
-        <div id="tabNotes" class="tab-content">
-            <textarea id="brainDumpNotes" class="glass-textarea" placeholder="Jot down quick thoughts, ideas, or distractions here... (Auto-saved)"></textarea>
-        </div>
-    </div>
+        <div class="glass-card ambient-card">
+            <h3>Ambient Sounds</h3>
+            <p class="ambient-sub">Select background audio for concentration</p>
+            
+            <div class="ambient-grid">
+                <button class="ambient-btn" onclick="toggleAudio(this, 'rain')"><span class="ambient-icon">📻</span><span>Pink Noise</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'lofi')"><span class="ambient-icon">🤎</span><span>Brown Noise</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'waves')"><span class="ambient-icon">🌧️</span><span>Rainstorm</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'forest')"><span class="ambient-icon">☕</span><span>Café</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'cafe')"><span class="ambient-icon">🔥</span><span>Fireplace</span></button>
+                <button class="ambient-btn" onclick="toggleAudio(this, 'fire')"><span class="ambient-icon">🧠</span><span>Beta Waves</span></button>
+            </div>
 
-    <!-- AMBIENT SOUNDS CARD -->
-    <div class="glass-card ambient-card">
-        <h3>Ambient Sounds</h3>
-        <p class="ambient-sub">Select background audio for concentration</p>
+            <audio id="audioRain" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
+            <audio id="audioLofi" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
+            <audio id="audioWaves" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
+            <audio id="audioForest" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
+            <audio id="audioCafe" loop src="https://archive.org/download/FireplaceCrackle1HourLoop/FireplaceCrackle.mp3"></audio>
+            <audio id="audioFire" loop src="https://archive.org/download/BinauralBeatsAlphaBetaThetaDelta_201804/Beta_14Hz_Focus.mp3"></audio>
+        </div>
+    </section>
         
-        <div class="ambient-grid">
-            <button class="ambient-btn" onclick="toggleAudio(this, 'rain')"><span class="ambient-icon">📻</span><span>Pink Noise</span></button>
-            <button class="ambient-btn" onclick="toggleAudio(this, 'lofi')"><span class="ambient-icon">🤎</span><span>Brown Noise</span></button>
-            <button class="ambient-btn" onclick="toggleAudio(this, 'waves')"><span class="ambient-icon">🌧️</span><span>Rainstorm</span></button>
-            <button class="ambient-btn" onclick="toggleAudio(this, 'forest')"><span class="ambient-icon">☕</span><span>Café</span></button>
-            <button class="ambient-btn" onclick="toggleAudio(this, 'cafe')"><span class="ambient-icon">🔥</span><span>Fireplace</span></button>
-            <button class="ambient-btn" onclick="toggleAudio(this, 'fire')"><span class="ambient-icon">🧠</span><span>Beta Waves</span></button>
-        </div>
-
-        <audio id="audioRain" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
-        <audio id="audioLofi" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
-        <audio id="audioWaves" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
-        <audio id="audioForest" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
-        <audio id="audioCafe" loop src="https://archive.org/download/FireplaceCrackle1HourLoop/FireplaceCrackle.mp3"></audio>
-        <audio id="audioFire" loop src="https://archive.org/download/BinauralBeatsAlphaBetaThetaDelta_201804/Beta_14Hz_Focus.mp3"></audio>
-    </div>
-</section>
+    <script src="{{ url_for('static', filename='study.js') }}"></script>
+</body>
+</html>
