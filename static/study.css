@@ -179,4 +179,32 @@
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* Styled Drop-down Select Elements */
+select.glass-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%236366f1' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+    padding-right: 36px;
+    background-color: var(--card-bg, #1e1b4b);
+    color: var(--text-main, #ffffff);
+    border: 1px solid var(--card-border, rgba(255, 255, 255, 0.12));
+    border-radius: 10px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
 
+select.glass-input:focus {
+    outline: none;
+    border-color: var(--accent, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+select.glass-input option {
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 10px;
+}
