@@ -482,12 +482,3 @@ document.addEventListener("DOMContentLoaded", () => {
     restoreActiveSession();
     initFocusNotes();
 });
-```[cite: 7]
-
----
-
-### Instructions to Implement
-
-1. Copy the code block above into `static/study.js`[cite: 7].
-2. Save the file and perform a hard refresh in your browser (`Ctrl + Shift + R` or `Cmd + Shift + R`).
-3. Click **Start Focus**, wait a few seconds, then click **Complete**: your session will instantly log into the SQLite database and update the history table[cite: 4, 5, 7]!
