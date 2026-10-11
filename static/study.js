@@ -402,18 +402,16 @@ function initFocusNotes() {
     });
 }
 
-// ==========================================
-// AMBIENT AUDIO PLAYER (MATCHING HTML PASS-BY-ELEMENT)
-// ==========================================
 let activeAudio = null;
 let activeBtn = null;
 
 /**
- * Handles HTML call: onclick="toggleAudio(audio, 'pink')"
- * Where `audio` is the DOM element (e.g. <audio id="audioRain">) or button target.
+ * Toggles ambient audio playback.
+ * @param {HTMLElement} btnElement - The button element passed via `this` in HTML
+ * @param {string} type - Sound identifier (e.g., 'pink', 'rain')
  */
-function toggleAudio(targetElement, type) {
-    // Map mode type to HTML audio element ID
+function toggleAudio(btnElement, type) {
+    // Map audio keys to existing <audio> element IDs in templates/study.html
     const audioMap = {
         pink: "audioRain",
         brown: "audioLofi",
@@ -427,11 +425,11 @@ function toggleAudio(targetElement, type) {
     const audio = document.getElementById(targetAudioId);
     
     if (!audio) {
-        console.warn("Audio element not found for key:", type, targetAudioId);
+        console.warn("Audio element not found for ID:", targetAudioId);
         return;
     }
 
-    // Toggle Off if clicking the currently active audio
+    // Toggle OFF if clicking the currently playing sound
     if (activeAudio === audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -441,7 +439,7 @@ function toggleAudio(targetElement, type) {
         return;
     }
 
-    // Stop currently playing track
+    // Stop any previously playing track
     if (activeAudio) {
         activeAudio.pause();
         activeAudio.currentTime = 0;
@@ -450,16 +448,15 @@ function toggleAudio(targetElement, type) {
         activeBtn.classList.remove("playing");
     }
 
-    // Play selected audio track
+    // Play selected track
     audio.play().then(() => {
-        // Highlight triggering button
-        const btn = event?.currentTarget || (targetElement instanceof HTMLElement ? targetElement : null);
-        if (btn) btn.classList.add("playing");
-        
+        if (btnElement && btnElement instanceof HTMLElement) {
+            btnElement.classList.add("playing");
+            activeBtn = btnElement;
+        }
         activeAudio = audio;
-        activeBtn = btn;
     }).catch(err => {
-        console.error("Playback prevented or audio missing:", err);
+        console.error("Playback error:", err);
     });
 }
 
