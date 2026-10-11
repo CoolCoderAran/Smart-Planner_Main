@@ -50,6 +50,47 @@ function getBreakMinutes() {
     return MODES[currentMode]?.break || 5;
 }
 
+function updateButtonUI() {
+    const btnPrimary = document.getElementById("btnPrimary");
+    const btnPause = document.getElementById("btnPause");
+    const btnEnd = document.getElementById("btnEnd");
+
+    if (!btnPrimary || !btnPause || !btnEnd) return;
+
+    if (!isRunning && !isPaused) {
+        // Idle State
+        btnPrimary.style.display = "inline-block";
+        btnPrimary.innerText = "Start Focus";
+        btnPause.style.display = "none";
+        btnEnd.style.display = "none";
+    } else if (isRunning) {
+        // Active Running State
+        btnPrimary.style.display = "none";
+        btnPause.style.display = "inline-block";
+        btnPause.innerText = "Pause";
+        btnPause.disabled = false;
+        btnEnd.style.display = "inline-block";
+        btnEnd.innerText = "End Session";
+    } else if (isPaused) {
+        // Paused State
+        btnPrimary.style.display = "inline-block";
+        btnPrimary.innerText = "Resume";
+        btnPause.style.display = "inline-block";
+        btnPause.innerText = "Paused";
+        btnPause.disabled = true;
+        btnEnd.style.display = "inline-block";
+        btnEnd.innerText = "End Session";
+    }
+}
+
+function handlePrimaryAction() {
+    if (isPaused) {
+        resumeTimer();
+    } else if (!isRunning) {
+        startTimer();
+    }
+}
+
 function loadMode() {
     if (isRunning || activeSessionId) return;
 
@@ -66,6 +107,7 @@ function loadMode() {
     const phaseLabel = document.getElementById("phaseLabel");
     if (phaseLabel) phaseLabel.innerText = "Focus Time";
     updateDisplay();
+    updateButtonUI();
 }
 
 function updateDisplay() {
@@ -75,6 +117,37 @@ function updateDisplay() {
     const minutes = Math.floor(Math.max(0, secondsRemaining) / 60);
     const seconds = Math.max(0, secondsRemaining) % 60;
     display.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function tickTimer() {
+    if (!isBreak && activeStartedAt) {
+        const startTime = new Date(activeStartedAt).getTime();
+        if (isNaN(startTime)) {
+            secondsRemaining--;
+        } else {
+            let pausedOffset = activeTotalPausedSeconds;
+            if (activePausedAt) {
+                pausedOffset += Math.floor((Date.now() - new Date(activePausedAt).getTime()) / 1000);
+            }
+            const elapsedRaw = Math.floor((Date.now() - startTime) / 1000);
+            const elapsed = Math.max(0, elapsedRaw - pausedOffset);
+            secondsRemaining = Math.max(0, (getFocusMinutes() * 60) - elapsed);
+        }
+    } else {
+        secondsRemaining--;
+    }
+
+    updateDisplay();
+
+    if (secondsRemaining <= 0) {
+        clearInterval(timer);
+        isRunning = false;
+        if (!isBreak) {
+            sessionFinished();
+        } else {
+            switchPhase();
+        }
+    }
 }
 
 async function startTimer() {
@@ -94,38 +167,13 @@ async function startTimer() {
 
         isRunning = true;
         isPaused = false;
+        updateButtonUI();
+
+        // Immediate tick to eliminate startup delay
+        tickTimer();
+
         clearInterval(timer);
-
-        timer = setInterval(() => {
-            if (!isBreak && activeStartedAt) {
-                const startTime = new Date(activeStartedAt).getTime();
-                if (isNaN(startTime)) {
-                    secondsRemaining--;
-                } else {
-                    let pausedOffset = activeTotalPausedSeconds;
-                    if (activePausedAt) {
-                        pausedOffset += Math.floor((Date.now() - new Date(activePausedAt).getTime()) / 1000);
-                    }
-                    const elapsedRaw = Math.floor((Date.now() - startTime) / 1000);
-                    const elapsed = Math.max(0, elapsedRaw - pausedOffset);
-                    secondsRemaining = Math.max(0, (getFocusMinutes() * 60) - elapsed);
-                }
-            } else {
-                secondsRemaining--;
-            }
-
-            updateDisplay();
-
-            if (secondsRemaining <= 0) {
-                clearInterval(timer);
-                isRunning = false;
-                if (!isBreak) {
-                    sessionFinished();
-                } else {
-                    switchPhase();
-                }
-            }
-        }, 1000);
+        timer = setInterval(tickTimer, 1000);
     } catch (error) {
         alert(error.message || "Failed to start timer session.");
     }
@@ -136,6 +184,7 @@ async function pauseTimer() {
     clearInterval(timer);
     isRunning = false;
     isPaused = true;
+    updateButtonUI();
     
     if (!activeSessionId) return;
     try {
@@ -184,6 +233,7 @@ async function resetTimer() {
     const phaseLabel = document.getElementById("phaseLabel");
     if (phaseLabel) phaseLabel.innerText = "Focus Time";
     updateDisplay();
+    updateButtonUI();
 }
 
 async function sessionFinished() {
@@ -205,6 +255,7 @@ async function sessionFinished() {
         activePausedAt = null;
         isPaused = false;
         switchPhase();
+        updateButtonUI();
     }
 }
 
@@ -256,6 +307,7 @@ async function restoreActiveSession() {
         } else if (activePausedAt) {
             isRunning = false;
             isPaused = true;
+            updateButtonUI();
         } else {
             startTimer();
         }
@@ -331,7 +383,6 @@ function initFocusNotes() {
     });
 }
 
-// Ambient audio handler
 let activeAudio = null;
 let activeBtn = null;
 
@@ -359,7 +410,6 @@ function toggleAudio(btnElement, type) {
     activeBtn = btnElement;
 }
 
-// Session history loader
 async function loadHistory() {
     try {
         const response = await fetch("/get_recent_sessions");
