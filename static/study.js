@@ -1,4 +1,6 @@
-// Configuration presets for timer modes
+// ==========================================
+// TIMER MODES & STATE VARIABLES
+// ==========================================
 const MODES = {
     pomodoro: { focus: 25, break: 5 },
     deepwork: { focus: 90, break: 15 },
@@ -6,7 +8,6 @@ const MODES = {
     examcrunch: { focus: 50, break: 10 }
 };
 
-// Application State Variables
 let timer = null;
 let secondsRemaining = 1500;
 let currentMode = "pomodoro";
@@ -18,7 +19,6 @@ let activeStartedAt = null;
 let activeTotalPausedSeconds = 0;
 let activePausedAt = null;
 
-// CSRF Token for Secure POST Requests
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
 /**
@@ -57,12 +57,12 @@ function getBreakMinutes() {
 }
 
 /**
- * Updates button visibility and labels based on timer state.
+ * Updates button visibility and labels based on exact HTML element IDs:
+ * #btnPrimary, #btnPause, #btnEnd
  */
 function updateButtonUI() {
     const btnPrimary = document.getElementById("btnPrimary");
     const btnPause = document.getElementById("btnPause");
-    const btnComplete = document.getElementById("btnComplete");
     const btnEnd = document.getElementById("btnEnd");
 
     if (!btnPrimary || !btnPause || !btnEnd) return;
@@ -72,17 +72,15 @@ function updateButtonUI() {
         btnPrimary.style.display = "inline-block";
         btnPrimary.innerText = "Start Focus";
         btnPause.style.display = "none";
-        if (btnComplete) btnComplete.style.display = "none";
         btnEnd.style.display = "none";
     } else if (isRunning) {
-        // ACTIVE RUNNING STATE
+        // RUNNING STATE
         btnPrimary.style.display = "none";
         btnPause.style.display = "inline-block";
         btnPause.innerText = "Pause";
         btnPause.disabled = false;
-        if (btnComplete) btnComplete.style.display = "inline-block";
         btnEnd.style.display = "inline-block";
-        btnEnd.innerText = "Abandon";
+        btnEnd.innerText = "End Session";
     } else if (isPaused) {
         // PAUSED STATE
         btnPrimary.style.display = "inline-block";
@@ -90,9 +88,8 @@ function updateButtonUI() {
         btnPause.style.display = "inline-block";
         btnPause.innerText = "Paused";
         btnPause.disabled = true;
-        if (btnComplete) btnComplete.style.display = "inline-block";
         btnEnd.style.display = "inline-block";
-        btnEnd.innerText = "Abandon";
+        btnEnd.innerText = "End Session";
     }
 }
 
@@ -182,7 +179,7 @@ async function startTimer() {
         isPaused = false;
         updateButtonUI();
 
-        tickTimer(); // Immediate render
+        tickTimer(); // Immediate UI update
         clearInterval(timer);
         timer = setInterval(tickTimer, 1000);
     } catch (error) {
@@ -245,17 +242,6 @@ async function resetTimer() {
     if (phaseLabel) phaseLabel.innerText = "Focus Time";
     updateDisplay();
     updateButtonUI();
-}
-
-async function completeSessionEarly() {
-    if (!activeSessionId) return;
-    
-    if (confirm("Would you like to complete and log this focus session now?")) {
-        clearInterval(timer);
-        isRunning = false;
-        isPaused = false;
-        await sessionFinished();
-    }
 }
 
 async function sessionFinished() {
@@ -343,6 +329,9 @@ async function restoreActiveSession() {
     }
 }
 
+// ==========================================
+// STATISTICS & HISTORY
+// ==========================================
 async function loadStats() {
     try {
         const response = await fetch("/get_study_stats");
@@ -359,8 +348,11 @@ async function loadStats() {
 
         const target = 120;
         const pct = Math.min(100, Math.round((today / target) * 100));
-        document.getElementById("goalFill").style.width = `${pct}%`;
-        document.getElementById("goalProgressText").innerText = `${today} / ${target} mins`;
+        
+        const goalFill = document.getElementById("goalFill");
+        const goalProgressText = document.getElementById("goalProgressText");
+        if (goalFill) goalFill.style.width = `${pct}%`;
+        if (goalProgressText) goalProgressText.innerText = `${today} / ${target} mins`;
     } catch (error) {
         console.error("Could not load stats.", error);
     }
@@ -410,31 +402,65 @@ function initFocusNotes() {
     });
 }
 
+// ==========================================
+// AMBIENT AUDIO PLAYER (MATCHING HTML PASS-BY-ELEMENT)
+// ==========================================
 let activeAudio = null;
 let activeBtn = null;
 
-function toggleAudio(btnElement, type) {
+/**
+ * Handles HTML call: onclick="toggleAudio(audio, 'pink')"
+ * Where `audio` is the DOM element (e.g. <audio id="audioRain">) or button target.
+ */
+function toggleAudio(targetElement, type) {
+    // Map mode type to HTML audio element ID
     const audioMap = {
-        rain: "audioRain", lofi: "audioLofi", waves: "audioWaves",
-        forest: "audioForest", cafe: "audioCafe", fire: "audioFire"
+        pink: "audioRain",
+        brown: "audioLofi",
+        rain: "audioWaves",
+        cafe: "audioForest",
+        fire: "audioCafe",
+        beta: "audioFire"
     };
-    const audio = document.getElementById(audioMap[type]);
-    if (!audio) return;
 
-    if (activeAudio === audio) {
-        audio.pause();
-        activeBtn?.classList.remove("playing");
-        activeAudio = activeBtn = null;
+    const targetAudioId = audioMap[type] || `audio${type.charAt(0).toUpperCase() + type.slice(1)}`;
+    const audio = document.getElementById(targetAudioId);
+    
+    if (!audio) {
+        console.warn("Audio element not found for key:", type, targetAudioId);
         return;
     }
-    
-    if (activeAudio) activeAudio.pause();
-    if (activeBtn) activeBtn.classList.remove("playing");
-    
-    audio.play().catch(() => {});
-    btnElement.classList.add("playing");
-    activeAudio = audio;
-    activeBtn = btnElement;
+
+    // Toggle Off if clicking the currently active audio
+    if (activeAudio === audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        if (activeBtn) activeBtn.classList.remove("playing");
+        activeAudio = null;
+        activeBtn = null;
+        return;
+    }
+
+    // Stop currently playing track
+    if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+    }
+    if (activeBtn) {
+        activeBtn.classList.remove("playing");
+    }
+
+    // Play selected audio track
+    audio.play().then(() => {
+        // Highlight triggering button
+        const btn = event?.currentTarget || (targetElement instanceof HTMLElement ? targetElement : null);
+        if (btn) btn.classList.add("playing");
+        
+        activeAudio = audio;
+        activeBtn = btn;
+    }).catch(err => {
+        console.error("Playback prevented or audio missing:", err);
+    });
 }
 
 async function loadHistory() {
