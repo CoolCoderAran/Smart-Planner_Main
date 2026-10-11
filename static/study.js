@@ -53,6 +53,7 @@ function getBreakMinutes() {
 function updateButtonUI() {
     const btnPrimary = document.getElementById("btnPrimary");
     const btnPause = document.getElementById("btnPause");
+    const btnComplete = document.getElementById("btnComplete");
     const btnEnd = document.getElementById("btnEnd");
 
     if (!btnPrimary || !btnPause || !btnEnd) return;
@@ -62,6 +63,7 @@ function updateButtonUI() {
         btnPrimary.style.display = "inline-block";
         btnPrimary.innerText = "Start Focus";
         btnPause.style.display = "none";
+        if (btnComplete) btnComplete.style.display = "none";
         btnEnd.style.display = "none";
     } else if (isRunning) {
         // Active Running State
@@ -69,8 +71,9 @@ function updateButtonUI() {
         btnPause.style.display = "inline-block";
         btnPause.innerText = "Pause";
         btnPause.disabled = false;
+        if (btnComplete) btnComplete.style.display = "inline-block";
         btnEnd.style.display = "inline-block";
-        btnEnd.innerText = "End Session";
+        btnEnd.innerText = "Abandon";
     } else if (isPaused) {
         // Paused State
         btnPrimary.style.display = "inline-block";
@@ -78,8 +81,9 @@ function updateButtonUI() {
         btnPause.style.display = "inline-block";
         btnPause.innerText = "Paused";
         btnPause.disabled = true;
+        if (btnComplete) btnComplete.style.display = "inline-block";
         btnEnd.style.display = "inline-block";
-        btnEnd.innerText = "End Session";
+        btnEnd.innerText = "Abandon";
     }
 }
 
@@ -169,7 +173,6 @@ async function startTimer() {
         isPaused = false;
         updateButtonUI();
 
-        // Immediate tick to eliminate startup delay
         tickTimer();
 
         clearInterval(timer);
@@ -231,226 +234,3 @@ async function resetTimer() {
     secondsRemaining = getFocusMinutes() * 60;
     
     const phaseLabel = document.getElementById("phaseLabel");
-    if (phaseLabel) phaseLabel.innerText = "Focus Time";
-    updateDisplay();
-    updateButtonUI();
-}
-
-async function sessionFinished() {
-    if (!activeSessionId) return;
-
-    try {
-        await postJSON("/focus/complete", {
-            session_id: activeSessionId,
-            note: document.getElementById("brainDumpNotes")?.value || ""
-        });
-        await loadStats();
-        await loadHistory();
-    } catch (error) {
-        console.error("Failed to complete focus session:", error);
-    } finally {
-        activeSessionId = null;
-        activeStartedAt = null;
-        activeTotalPausedSeconds = 0;
-        activePausedAt = null;
-        isPaused = false;
-        switchPhase();
-        updateButtonUI();
-    }
-}
-
-function switchPhase() {
-    const phaseLabel = document.getElementById("phaseLabel");
-    if (!isBreak) {
-        if (phaseLabel) phaseLabel.innerText = "Break Time";
-        secondsRemaining = getBreakMinutes() * 60;
-        isBreak = true;
-    } else {
-        isBreak = false;
-        if (phaseLabel) phaseLabel.innerText = "Focus Time";
-        secondsRemaining = getFocusMinutes() * 60;
-    }
-    updateDisplay();
-}
-
-async function restoreActiveSession() {
-    try {
-        const response = await fetch("/focus/active");
-        if (!response.ok) return;
-        const data = await response.json();
-        if (!data.active) return;
-
-        activeSessionId = data.active.id;
-        activeStartedAt = data.active.started_at;
-        activeTotalPausedSeconds = data.active.total_paused_seconds || 0;
-        activePausedAt = data.active.paused_at || null;
-        currentMode = data.active.mode || "pomodoro";
-        
-        const modeSelect = document.getElementById("modeSelect");
-        if (modeSelect) modeSelect.value = currentMode;
-
-        let pausedSoFar = activeTotalPausedSeconds;
-        if (activePausedAt) {
-            pausedSoFar += Math.floor((Date.now() - new Date(activePausedAt).getTime()) / 1000);
-        }
-        
-        const startTime = new Date(activeStartedAt).getTime();
-        const elapsed = Math.max(0, Math.floor((Date.now() - startTime) / 1000) - pausedSoFar);
-        secondsRemaining = Math.max(0, (getFocusMinutes() * 60) - elapsed);
-        
-        const phaseLabel = document.getElementById("phaseLabel");
-        if (phaseLabel) phaseLabel.innerText = "Focus Time";
-        updateDisplay();
-
-        if (secondsRemaining <= 0) {
-            await sessionFinished();
-        } else if (activePausedAt) {
-            isRunning = false;
-            isPaused = true;
-            updateButtonUI();
-        } else {
-            startTimer();
-        }
-    } catch (error) {
-        console.error("Could not restore active focus session.", error);
-    }
-}
-
-async function loadStats() {
-    try {
-        const response = await fetch("/get_study_stats");
-        if (!response.ok) return;
-        const data = await response.json();
-
-        const today = data.today_minutes || 0;
-        document.getElementById("todayMinutes").innerText = today;
-        document.getElementById("weeklyMinutes").innerText = data.weekly_minutes || 0;
-        document.getElementById("totalSessions").innerText = data.total_sessions || 0;
-        document.getElementById("totalMinutes").innerText = data.total_minutes || 0;
-        document.getElementById("currentStreak").innerText = `${data.current_streak || 0} Days`;
-        document.getElementById("bestStreak").innerText = `${data.best_streak || 0} Days`;
-
-        const target = 120;
-        const pct = Math.min(100, Math.round((today / target) * 100));
-        document.getElementById("goalFill").style.width = `${pct}%`;
-        document.getElementById("goalProgressText").innerText = `${today} / ${target} mins`;
-    } catch (error) {
-        console.error("Could not load stats.", error);
-    }
-}
-
-function switchTab(tabName) {
-    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
-    
-    const index = tabName === "history" ? 0 : 1;
-    document.querySelectorAll(".tab-btn")[index]?.classList.add("active");
-    document.getElementById(tabName === "history" ? "tabHistory" : "tabNotes")?.classList.add("active");
-}
-
-let _notesSaveTimer = null;
-
-async function loadFocusNotes() {
-    const notesElem = document.getElementById("brainDumpNotes");
-    if (!notesElem) return;
-    try {
-        const response = await fetch("/focus/notes");
-        if (!response.ok) return;
-        const data = await response.json();
-        notesElem.value = data.note || "";
-    } catch (error) {
-        console.error("Could not load focus notes:", error);
-    }
-}
-
-async function saveFocusNotes(text) {
-    try {
-        await postJSON("/focus/notes", { note: text });
-    } catch (error) {
-        console.error("Could not save focus notes:", error);
-    }
-}
-
-function initFocusNotes() {
-    const notesElem = document.getElementById("brainDumpNotes");
-    if (!notesElem) return;
-
-    loadFocusNotes();
-
-    notesElem.addEventListener("input", () => {
-        clearTimeout(_notesSaveTimer);
-        _notesSaveTimer = setTimeout(() => saveFocusNotes(notesElem.value), 800);
-    });
-}
-
-let activeAudio = null;
-let activeBtn = null;
-
-function toggleAudio(btnElement, type) {
-    const audioMap = {
-        rain: "audioRain", lofi: "audioLofi", waves: "audioWaves",
-        forest: "audioForest", cafe: "audioCafe", fire: "audioFire"
-    };
-    const audio = document.getElementById(audioMap[type]);
-    if (!audio) return;
-
-    if (activeAudio === audio) {
-        audio.pause();
-        activeBtn?.classList.remove("playing");
-        activeAudio = activeBtn = null;
-        return;
-    }
-    
-    if (activeAudio) activeAudio.pause();
-    if (activeBtn) activeBtn.classList.remove("playing");
-    
-    audio.play().catch(() => {});
-    btnElement.classList.add("playing");
-    activeAudio = audio;
-    activeBtn = btnElement;
-}
-
-async function loadHistory() {
-    try {
-        const response = await fetch("/get_recent_sessions");
-        if (!response.ok) return;
-        const sessions = await response.json();
-        const tbody = document.getElementById("sessionHistoryBody");
-        if (!tbody) return;
-
-        if (!sessions.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">No recent sessions found.</td></tr>';
-            return;
-        }
-
-        tbody.replaceChildren(...sessions.map(session => {
-            const row = document.createElement("tr");
-            [
-                session.task || "General Focus",
-                session.mode || "focus",
-                `${session.minutes} mins`,
-                session.note ? "Saved" : "None",
-                session.completed_at ? new Date(session.completed_at).toLocaleDateString() : ""
-            ].forEach(value => {
-                const cell = document.createElement("td");
-                cell.textContent = value;
-                row.appendChild(cell);
-            });
-            return row;
-        }));
-    } catch (error) {
-        console.error("Could not fetch session history.", error);
-    }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("modeSelect")?.addEventListener("change", loadMode);
-    document.getElementById("customFocus")?.addEventListener("input", loadMode);
-    document.getElementById("customBreak")?.addEventListener("input", loadMode);
-
-    loadMode();
-    loadStats();
-    loadHistory();
-    restoreActiveSession();
-    initFocusNotes();
-});
