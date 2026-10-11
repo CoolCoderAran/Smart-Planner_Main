@@ -155,17 +155,30 @@
         </div>
 
         <div class="glass-card ambient-card">
-            <h3>Ambient Sounds</h3>
-            <p class="ambient-sub">Select background audio for concentration</p>
-            
-            <div class="ambient-grid">
-                <button class="ambient-btn" onclick="toggleAudio(this, 'rain')"><span class="ambient-icon">📻</span><span>Pink Noise</span></button>
-                <button class="ambient-btn" onclick="toggleAudio(this, 'lofi')"><span class="ambient-icon">🤎</span><span>Brown Noise</span></button>
-                <button class="ambient-btn" onclick="toggleAudio(this, 'waves')"><span class="ambient-icon">🌧️</span><span>Rainstorm</span></button>
-                <button class="ambient-btn" onclick="toggleAudio(this, 'forest')"><span class="ambient-icon">☕</span><span>Café</span></button>
-                <button class="ambient-btn" onclick="toggleAudio(this, 'cafe')"><span class="ambient-icon">🔥</span><span>Fireplace</span></button>
-                <button class="ambient-btn" onclick="toggleAudio(this, 'fire')"><span class="ambient-icon">🧠</span><span>Beta Waves</span></button>
-            </div>
+    <h3>Ambient Sounds</h3>
+    <p class="ambient-sub">Select background audio for concentration</p>
+    
+    <div class="ambient-grid">
+        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'pink')">
+            <span class="ambient-icon">📻</span><span>Pink Noise</span>
+        </button>
+        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'brown')">
+            <span class="ambient-icon">🤎</span><span>Brown Noise</span>
+        </button>
+        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'rain')">
+            <span class="ambient-icon">🌧️</span><span>Rainstorm</span>
+        </button>
+        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'cafe')">
+            <span class="ambient-icon">☕</span><span>Café</span>
+        </button>
+        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'fire')">
+            <span class="ambient-icon">🔥</span><span>Fireplace</span>
+        </button>
+        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'beta')">
+            <span class="ambient-icon">🧠</span><span>Beta Waves (14Hz)</span>
+        </button>
+    </div>
+</div>
 
             <audio id="audioRain" loop src="https://ia801406.us.archive.org/32/items/RelaxingRainAndLoudThunderFreeFieldRecordingOfNatureSoundsForSleepOrMeditation/soft.mp3"></audio>
             <audio id="audioLofi" loop src="https://ia800706.us.archive.org/17/items/CafeAmbiance1HourLoop/CafeAmbiance.mp3"></audio>
