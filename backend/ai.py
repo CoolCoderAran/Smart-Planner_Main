@@ -192,7 +192,6 @@ def accept_proposed_task():
 
     task_data = data.get("proposed_task") or data
 
-    # Convert form data to a regular dictionary when necessary.
     if hasattr(task_data, "to_dict"):
         task_data = task_data.to_dict()
 
@@ -243,7 +242,6 @@ def apply_proposed_schedule():
         else request.form
     ) or {}
 
-    # Support both this endpoint's original key and the frontend's key.
     schedule = data.get("proposed_schedule") or data.get("blocks") or []
 
     valid, sanitized, error = validate_schedule(schedule)
@@ -386,8 +384,8 @@ def query_terra_ai(user_query, task_context):
         timeout=AI_REQUEST_TIMEOUT_SECONDS,
     )
 
-now_utc = datetime.now(timezone.utc)
-    today_str = now_utc.strftime("%A, %B %d, %Y")  # e.g., "Sunday, October 11, 2026"
+    now_utc = datetime.now(timezone.utc)
+    today_str = now_utc.strftime("%A, %B %d, %Y")
     iso_date_str = now_utc.strftime("%Y-%m-%d")
 
     system_instructions = (
@@ -415,6 +413,7 @@ now_utc = datetime.now(timezone.utc)
         "   - Always return strict JSON containing exact keys: 'message', 'suggested_actions', 'proposed_schedule', and 'proposed_task'.\n"
         "   - Use only valid task fields for proposed_task: 'title', 'subject', 'due_date', 'due_time', 'estimated_minutes', 'priority'."
     )
+
     try:
         context_str = (
             json.dumps(task_context)
@@ -449,7 +448,6 @@ now_utc = datetime.now(timezone.utc)
             "proposed_schedule": None,
             "proposed_task": None,
         }
-
 
 def build_user_context(user_id):
     conn = get_db()
