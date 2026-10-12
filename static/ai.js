@@ -158,4 +158,35 @@ async function applyAllProposals() {
     }
 }
 
+function renderTerraMessage(data) {
+    const chatMessages = document.getElementById("chatMessages");
+    if (!chatMessages) return;
 
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "message terra-message";
+
+    let chipsHtml = "";
+    if (Array.isArray(data.suggested_actions) && data.suggested_actions.length > 0) {
+        chipsHtml = `<div class="suggestion-chips">` + 
+            data.suggested_actions.map(act => {
+                const label = typeof act === 'object' ? (act.label || act.action || 'Action') : act;
+                return `<button type="button" class="chip" onclick="usePrompt('${label}')">${label}</button>`;
+            }).join('') + 
+        `</div>`;
+    }
+
+    msgDiv.innerHTML = `
+        <div class="msg-avatar"><i data-lucide="sparkles"></i></div>
+        <div class="msg-bubble">
+            <p>${data.message}</p>
+            ${chipsHtml}
+        </div>
+    `;
+
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
