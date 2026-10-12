@@ -1,98 +1,227 @@
-/* Analytics Module */
-.glass-container {
+/* ==========================================================================
+   ANALYTICS MODULE — STYLESHEET (static/analytics.css)
+   Fully standardized with hub.css design system variables
+   ========================================================================== */
+
+/* Layout Container */
+.analytics-container {
     max-width: 1200px;
-    margin: 0 auto;
-    padding: 24px;
+    margin: 20px auto 40px;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-header { margin-bottom: 24px; }
-header h1 { margin: 0; font-size: 2rem; color: var(--text-title); }
-header p { color: var(--text-muted); margin-top: 4px; }
+.analytics-header h2 {
+    font-size: 1.5rem;
+    color: var(--text-title);
+    margin-bottom: 4px;
+}
 
+.analytics-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Metric Summary Cards */
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
-    margin-bottom: 24px;
 }
 
-.metrics-grid h3 {
-    margin: 0 0 8px 0;
-    font-size: 0.9rem;
+.metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 18px 16px;
+    backdrop-filter: var(--backdrop-blur);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--card-border-light);
+}
+
+.metric-card .metric-label {
+    font-size: 0.8rem;
+    font-weight: 600;
     color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.stat-value {
-    font-size: 1.8rem;
+.metric-card .metric-value {
+    font-size: 1.6rem;
     font-weight: 700;
-    color: var(--accent);
+    margin-top: 6px;
+    color: var(--text-main);
 }
 
-.text-alert { color: var(--alert-color); }
-
+/* ==========================================================================
+   CHART CARDS (FIXED OVERFLOW & SIZING)
+   ========================================================================== */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
-    margin-bottom: 24px;
 }
 
-.chart-card { min-height: 300px; }
-.chart-card h3 { margin-top: 0; margin-bottom: 16px; color: var(--text-title); }
+.chart-card {
+    position: relative;
+    width: 100%;
+    height: 300px; /* Fixed height container */
+    padding: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    backdrop-filter: var(--backdrop-blur);
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Stops chart overflow */
+}
+
+.chart-card h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-title);
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.chart-wrapper {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0; /* Important for flex child canvas containment */
+    overflow: hidden;
+}
+
+.chart-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+/* ==========================================================================
+   ACHIEVEMENTS GRID (FIXED LIGHT / NORDIC THEME CONTRAST)
+   ========================================================================== */
+.achievements-section {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 24px;
+    backdrop-filter: var(--backdrop-blur);
+    box-shadow: var(--card-shadow);
+}
+
+.achievements-section h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-title);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
 .achievements-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-    margin-top: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 6px;
 }
 
+/* Active Unlocked Achievement Card */
 .achievement-card {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--card-bg-hover);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px;
     transition: all 0.2s ease;
 }
 
-.achievement-card.locked {
-    opacity: 0.5;
-    filter: grayscale(0.8);
-}
-
 .achievement-card.unlocked {
-    opacity: 1;
-    filter: none;
-    background: rgba(99, 102, 241, 0.12);
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    background: var(--ai-card-bg, rgba(99, 102, 241, 0.08));
+    border-color: var(--accent);
 }
 
 .achievement-icon {
-    font-size: 2rem;
+    font-size: 1.6rem;
+    flex-shrink: 0;
 }
 
-.achievement-info h4 {
-    margin: 0 0 0.25rem 0;
-    font-size: 1rem;
-    color: var(--text-title, #ffffff);
+.achievement-info {
+    display: flex;
+    flex-direction: column;
 }
 
-.achievement-info p {
-    margin: 0;
-    font-size: 0.82rem;
-    color: var(--text-muted, #9ca3af);
+.achievement-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-main);
 }
 
-.achievement-info small {
-    display: block;
-    margin-top: 0.35rem;
+.achievement-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: 1.35;
+}
+
+.achievement-date {
     font-size: 0.72rem;
     font-weight: 600;
+    color: var(--accent);
+    margin-top: 6px;
 }
 
-.earned-date { color: #34d399; }
-.locked-text { color: #6b7280; }
+/* Theme-Adaptive Locked Achievement Cards */
+.achievement-card.locked {
+    background: var(--card-bg-hover);
+    border: 1px dashed var(--card-border);
+    opacity: 0.6;
+}
+
+.achievement-card.locked:hover {
+    opacity: 0.85;
+    border-color: var(--card-border-light);
+}
+
+.achievement-card.locked .achievement-title {
+    color: var(--text-muted);
+}
+
+.achievement-card.locked .achievement-desc {
+    color: var(--text-sub, var(--text-muted));
+}
+
+.achievement-card.locked .achievement-icon {
+    filter: grayscale(1);
+    opacity: 0.5;
+}
+
+/* Responsive Scaling */
+@media (max-width: 1024px) {
+    .metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
