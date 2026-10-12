@@ -190,3 +190,226 @@ function renderTerraMessage(data) {
         lucide.createIcons();
     }
 }
+
+// ==========================================
+// TERRA AI ASSISTANT FRONTEND CONTROLLER
+// Handles persistence via localStorage
+// ==========================================
+
+const CHAT_STORAGE_KEY = "terra_chat_history";
+
+/**
+ * Retrieves the current array of saved message objects from localStorage.
+ */
+function getStoredMessages() {
+    try {
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        console.error("Failed to parse chat history from localStorage:", e);
+        return [];
+    }
+}
+
+/**
+ * Appends a new message object to localStorage history.
+ */
+function appendToStoredHistory(msgObj) {
+    const history = getStoredMessages();
+    history.push(msgObj);
+    try {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(history));
+    } catch (e) {
+        console.error("Failed to save chat message to localStorage:", e);
+    }
+}
+
+/**
+ * Clears saved chat history from localStorage and resets the chat UI.
+ */
+function clearChatHistory() {
+    if (confirm("Are you sure you want to clear your chat history with Terra?")) {
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+        const chatContainer = document.getElementById("chatMessages");
+        if (chatContainer) {
+            // Restore initial default Terra welcome bubble
+            chatContainer.innerHTML = `
+                <div class="message terra-message">
+                    <div class="msg-avatar"><i data-lucide="sparkles"></i></div>
+                    <div class="msg-bubble">
+                        <p>Hello! I'm <strong>Terra</strong>, your AI scheduling assistant.</p>
+                        <p>What are we planning today?</p>
+                        <div class="suggestion-chips">
+                            <button type="button" class="chip" onclick="usePrompt('Help me plan my study schedule for final exams next week.')">📚 Plan exam schedule</button>
+                            <button type="button" class="chip" onclick="usePrompt('Break down my term paper into subtasks with deadlines.')">📝 Break down assignment</button>
+                            <button type="button" class="chip" onclick="usePrompt('Organize my tasks for today by priority.')">⚡ Optimize today's schedule</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+/**
+ * Restores saved chat bubbles from localStorage on page load.
+ */
+function restoreChatHistoryUI() {
+    const history = getStoredMessages();
+    if (!history || history.length === 0) return;
+
+    const chatContainer = document.getElementById("chatMessages");
+    if (!chatContainer) return;
+
+    // Clear static HTML default welcome if saved history exists
+    chatContainer.innerHTML = "";
+
+    history.forEach(item => {
+        if (item.sender === "user") {
+            appendUserBubbleUI(item.text, false); // false = don't re-save
+        } else if (item.sender === "terra") {
+            appendTerraBubbleUI(item.data, false); // false = don't re-save
+        }
+    });
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Appends a user prompt bubble to the DOM.
+ */
+function appendUserBubbleUI(text, saveToStorage = true) {
+    const chatContainer = document.getElementById("chatMessages");
+    if (!chatContainer) return;
+
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "message user-message";
+    msgDiv.innerHTML = `
+        <div class="msg-avatar"><i data-lucide="user"></i></div>
+        <div class="msg-bubble"><p>${escapeHtml(text)}</p></div>
+    `;
+    chatContainer.appendChild(msgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    if (saveToStorage) {
+        appendToStoredHistory({ sender: "user", text: text });
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Appends a Terra AI response bubble to the DOM.
+ */
+function appendTerraBubbleUI(data, saveToStorage = true) {
+    const chatContainer = document.getElementById("chatMessages");
+    if (!chatContainer) return;
+
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "message terra-message";
+
+    let chipsHtml = "";
+    if (Array.isArray(data.suggested_actions) && data.suggested_actions.length > 0) {
+        chipsHtml = `<div class="suggestion-chips">` + 
+            data.suggested_actions.map(act => {
+                const label = typeof act === 'object' ? (act.label || act.action || 'Action') : act;
+                return `<button type="button" class="chip" onclick="usePrompt('${escapeHtml(label)}')">${escapeHtml(label)}</button>`;
+            }).join('') + 
+        `</div>`;
+    }
+
+    msgDiv.innerHTML = `
+        <div class="msg-avatar"><i data-lucide="sparkles"></i></div>
+        <div class="msg-bubble">
+            <p>${escapeHtml(data.message)}</p>
+            ${chipsHtml}
+        </div>
+    `;
+
+    chatContainer.appendChild(msgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    if (saveToStorage) {
+        appendToStoredHistory({ sender: "terra", data: data });
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Submits user query to Flask backend via AJAX.
+ */
+async function handleChatSubmit(event) {
+    if (event) event.preventDefault();
+
+    const inputArea = document.getElementById("userInput");
+    if (!inputArea) return;
+
+    const query = inputArea.value.trim();
+    if (!query) return;
+
+    // Display and save user message
+    appendUserBubbleUI(query, true);
+    inputArea.value = "";
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
+    try {
+        const response = await fetch("/api/ai/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({ query: query })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            appendTerraBubbleUI({ message: data.error || "An error occurred while processing your request.", suggested_actions: [] }, true);
+            return;
+        }
+
+        // Display and save Terra response
+        appendTerraBubbleUI(data, true);
+
+        // Render proposals if returned in payload
+        if (typeof renderProposals === "function") {
+            renderProposals(data);
+        }
+
+    } catch (err) {
+        console.error("Chat request failed:", err);
+        appendTerraBubbleUI({ message: "Could not connect to Terra AI. Please check your connection.", suggested_actions: [] }, true);
+    }
+}
+
+function usePrompt(promptText) {
+    const inputArea = document.getElementById("userInput");
+    if (inputArea) {
+        inputArea.value = promptText;
+        handleChatSubmit();
+    }
+}
+
+function handleKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        handleChatSubmit(event);
+    }
+}
+
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Initialize on DOM load
+document.addEventListener("DOMContentLoaded", () => {
+    restoreChatHistoryUI();
+});
