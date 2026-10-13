@@ -1168,6 +1168,13 @@ def google_sync(user_id):
                 )
 
             if response.status_code != 200:
+                current_app.logger.error(
+                    "Google Calendar events request failed: "
+                    "status=%s body=%s",
+                    response.status_code,
+                    (response.text or "")[:1000],
+                )
+
                 return api_error(
                     "Could not fetch events from Google Calendar.",
                     "GOOGLE_FETCH_FAILED",
