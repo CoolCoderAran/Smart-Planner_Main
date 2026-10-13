@@ -846,27 +846,10 @@ def google_status(user_id):
 
     conn = db.get_db()
 
-user = conn.execute(
-    "SELECT id FROM users WHERE id = ?",
-    (user_id,),
-).fetchone()
-
-if user is None:
-    current_app.logger.error(
-        "Google OAuth failed: user_id=%r is missing from users table",
+    account = _get_google_account(
+        conn,
         user_id,
     )
-    return redirect(url_for("login"))  # Use your actual login endpoint name.
-
-user_id = user["id"]
-
-_save_google_tokens(
-    conn,
-    user_id,
-    access_token,
-    payload.get("refresh_token"),
-    payload.get("expires_in"),
-)
 
     return jsonify({
         "configured": True,
@@ -1002,6 +985,18 @@ def google_callback(user_id):
         )
 
     conn = db.get_db()
+
+    user = conn.execute(
+        "SELECT id FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+
+    if user is None:
+        current_app.logger.error(
+            "Google OAuth failed: user_id=%r is missing from users table",
+            user_id,
+        )
+        return redirect(url_for("calendar.calendar_view", gcal_error="user_not_found"))
 
     _save_google_tokens(
         conn,
