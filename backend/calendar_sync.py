@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import requests
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, session, current_app
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from auth import require_auth
@@ -114,7 +114,6 @@ def validate_event_input(data, *, user_tz=timezone.utc):
 
     try:
         if is_all_day:
-            # All-day events use midnight-to-midnight semantics.
             start_dt = datetime.strptime(
                 start_raw.split("T")[0],
                 "%Y-%m-%d",
@@ -201,7 +200,6 @@ def get_feed(user_id):
     conn = db.get_db()
     cursor = conn.cursor()
 
-    # 1. Fetch standalone calendar events that overlap the requested window.
     cursor.execute(
         """
         SELECT
@@ -243,7 +241,6 @@ def get_feed(user_id):
         if row["planner_task_id"]
     }
 
-    # 2. Project Planner tasks onto the calendar.
     cursor.execute(
         """
         SELECT
@@ -293,7 +290,6 @@ def get_feed(user_id):
         except ValueError:
             end_iso = start_iso
 
-        # Task must overlap requested window.
         if not (
             start_iso < end_bound
             and end_iso > start_bound
@@ -750,7 +746,6 @@ def _save_google_tokens(
     conn.commit()
 
 
-
 def _refresh_access_token(conn, user_id, account):
     if not account["refresh_token"]:
         return None
@@ -769,19 +764,15 @@ def _refresh_access_token(conn, user_id, account):
     except requests.RequestException:
         return None
 
-            if response.status_code != 200:
-            current_app.logger.error(
-                "Google Calendar events API failed: "
-                "status=%s, response=%s",
-                response.status_code,
-                (response.text or "")[:1000],
-            )
+    if response.status_code != 200:
+        current_app.logger.error(
+            "Google Calendar token refresh failed: "
+            "status=%s, response=%s",
+            response.status_code,
+            (response.text or "")[:1000],
+        )
+        return None
 
-            return api_error(
-                "Could not fetch events from Google Calendar.",
-                "GOOGLE_FETCH_FAILED",
-                502,
-            )
     try:
         payload = response.json()
     except ValueError:
@@ -802,7 +793,6 @@ def _refresh_access_token(conn, user_id, account):
     )
 
     return access_token
-
 
 
 def _valid_access_token(conn, user_id):
@@ -1147,10 +1137,6 @@ def google_sync(user_id):
     pulled = 0
     pushed = 0
 
-    # -----------------------------------------------------------------------
-    # 1. Pull Google events into the local database.
-    # -----------------------------------------------------------------------
-
     try:
         page_token = None
 
@@ -1314,10 +1300,6 @@ def google_sync(user_id):
             502,
         )
 
-    # -----------------------------------------------------------------------
-    # 2. Push locally-created events to Google.
-    # -----------------------------------------------------------------------
-
     try:
         local_only = conn.execute(
             """
@@ -1409,10 +1391,6 @@ def google_sync(user_id):
             "GOOGLE_NETWORK_ERROR",
             502,
         )
-
-    # -----------------------------------------------------------------------
-    # Update sync timestamp.
-    # -----------------------------------------------------------------------
 
     conn.execute(
         """
