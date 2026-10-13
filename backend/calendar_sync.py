@@ -769,20 +769,19 @@ def _refresh_access_token(conn, user_id, account):
     except requests.RequestException:
         return None
 
-    if response.status_code != 200:
-    current_app.logger.error(
-        "Google Calendar events API failed: "
-        "status=%s, response=%s",
-        response.status_code,
-        (response.text or "")[:1000],
-    )
+            if response.status_code != 200:
+            current_app.logger.error(
+                "Google Calendar events API failed: "
+                "status=%s, response=%s",
+                response.status_code,
+                (response.text or "")[:1000],
+            )
 
-    return api_error(
-        "Could not fetch events from Google Calendar.",
-        "GOOGLE_FETCH_FAILED",
-        502,
-    )
-
+            return api_error(
+                "Could not fetch events from Google Calendar.",
+                "GOOGLE_FETCH_FAILED",
+                502,
+            )
     try:
         payload = response.json()
     except ValueError:
