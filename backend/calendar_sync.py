@@ -750,6 +750,7 @@ def _save_google_tokens(
     conn.commit()
 
 
+
 def _refresh_access_token(conn, user_id, account):
     if not account["refresh_token"]:
         return None
@@ -768,8 +769,7 @@ def _refresh_access_token(conn, user_id, account):
     except requests.RequestException:
         return None
 
-   
-if response.status_code != 200:
+    if response.status_code != 200:
     current_app.logger.error(
         "Google Calendar events API failed: "
         "status=%s, response=%s",
@@ -782,7 +782,6 @@ if response.status_code != 200:
         "GOOGLE_FETCH_FAILED",
         502,
     )
-
 
     try:
         payload = response.json()
@@ -804,6 +803,7 @@ if response.status_code != 200:
     )
 
     return access_token
+
 
 
 def _valid_access_token(conn, user_id):
