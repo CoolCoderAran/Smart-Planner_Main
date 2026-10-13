@@ -345,20 +345,73 @@ function escapeHTML(str) {
 }
 
 // Optional Google Calendar Sync API
+// Google Calendar connection-aware sync.
+// OAuth must use a top-level browser navigation so Google can display consent.
 async function syncGoogleCalendar() {
     const button = document.getElementById("gcalSyncBtn");
-    if (!button) return;
+    if (!button || button.dataset.busy === "true") return;
+
     const originalText = button.textContent;
+    button.dataset.busy = "true";
     button.disabled = true;
-    button.textContent = "Syncing…";
+    button.textContent = "Checking Google Calendar…";
+
+    let navigatingToOAuth = false;
+
     try {
-        const response = await apiRequest("/api/calendar/google/sync", "POST");
-        alert(`Google Calendar synced!\nImported: ${response.pulled ?? 0}\nExported: ${response.pushed ?? 0}`);
+        // Check connection status before attempting to sync.
+        const status = await apiRequest(
+            "/api/calendar/google/status",
+            "GET"
+        );
+
+        if (!status || status.configured !== true) {
+            throw new Error(
+                "Google Calendar is not configured on the server. " +
+                "Check the Google OAuth environment variables in Render."
+            );
+        }
+
+        // If not connected, redirect the browser to Google's OAuth flow.
+        if (status.connected !== true) {
+            button.textContent = "Opening Google…";
+            navigatingToOAuth = true;
+
+            window.location.assign(
+                "/api/calendar/google/connect"
+            );
+
+            return;
+        }
+
+        // The account is connected, so syncing is now appropriate.
+        button.textContent = "Syncing…";
+
+        const response = await apiRequest(
+            "/api/calendar/google/sync",
+            "POST"
+        );
+
+        alert(
+            `Google Calendar synced successfully!\n` +
+            `Imported: ${response.pulled ?? 0}\n` +
+            `Exported: ${response.pushed ?? 0}`
+        );
+
         window.location.reload();
+
     } catch (error) {
-        alert(error.message || "Google Calendar sync failed.");
+        alert(
+            error?.message ||
+            "Google Calendar could not be connected or synced. Please try again."
+        );
+
     } finally {
-        button.disabled = false;
-        button.textContent = originalText;
+        // Keep the button disabled while navigating to Google.
+        if (!navigatingToOAuth) {
+            button.disabled = false;
+            button.textContent = originalText;
+            delete button.dataset.busy;
+        }
     }
 }
