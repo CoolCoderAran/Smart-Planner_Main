@@ -55,7 +55,7 @@ function closeModal() {
 }
 
 // Safe Task Editing trigger invoked by button click
-function editTask(id, title, subject, minutes, priority, dueDate, dueTime) {
+function editTask(id, title, subject, minutes, priority, dueDate, dueTime, notes = "") {
     editingTaskId = id;
     const modal = document.getElementById("taskModal");
     if (!modal) return;
@@ -68,6 +68,7 @@ function editTask(id, title, subject, minutes, priority, dueDate, dueTime) {
     document.getElementById("modalPriority").value = String(priority ?? 2);
     document.getElementById("modalDueDate").value = dueDate ?? "";
     document.getElementById("modalDueTime").value = dueTime || "23:59";
+    document.getElementById("modalNotes").value = notes ?? "";
 
     modal.classList.add("active", "open");
     modal.style.display = "flex";
@@ -239,7 +240,8 @@ document.addEventListener("DOMContentLoaded", () => {
             due_date: form.get("due_date"),
             due_time: form.get("due_time"),
             estimated_minutes: Number(form.get("estimated_minutes") || 30),
-            priority: Number(form.get("priority") || 2)
+            priority: Number(form.get("priority") || 2),
+            notes: String(form.get("notes") || "").trim()
         };
 
         try {
