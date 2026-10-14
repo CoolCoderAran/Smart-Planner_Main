@@ -19,7 +19,6 @@
 
 {% include 'navbar.html' %}
 
-
 <div id="mainContent" class="main-container">
     <header class="planner-header">
         <div id="batchBar" class="batch-bar glass-card" style="display: none;">
@@ -82,16 +81,15 @@
                     </div>
                 </div>
 
-               <div class="task-actions">
-    <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
-
-    <button type="button" class="glass-btn" 
-            onclick="editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or '') | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or '') | tojson }}, {{ (task.due_time or '') | tojson }}, {{ (task.notes or '') | tojson }})">
-        Edit
-    </button>
-
-    <button type="button" class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
-</div>
+                <div class="task-actions">
+                    <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
+                    <button type="button" class="glass-btn" 
+                            onclick="editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or '') | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or '') | tojson }}, {{ (task.due_time or '') | tojson }}, {{ (task.notes or '') | tojson }})">
+                        Edit
+                    </button>
+                    <button type="button" class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
+                </div>
+            </div>
 
             <!-- Inline Subtask Input Form -->
             <div id="inlineSubtaskForm-{{ task.id }}" class="inline-subtask-form">
