@@ -79,6 +79,10 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(parent_id) REFERENCES planner_tasks(id) ON DELETE CASCADE,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                title TEXT NOT NULL,
+                subject TEXT DEFAULT 'General',
+                notes TEXT DEFAULT '',
+                due_date TEXT DEFAULT NULL,
             );
 
             CREATE TABLE IF NOT EXISTS focus_sessions (
