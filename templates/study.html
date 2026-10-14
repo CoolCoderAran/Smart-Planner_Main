@@ -155,39 +155,39 @@
         </div>
 
         <div class="glass-card ambient-card">
-    <h3>Ambient Sounds</h3>
-    <p class="ambient-sub">Select background audio for concentration</p>
-    
-    <div class="ambient-grid">
-        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'pink')">
-            <span class="ambient-icon">📻</span><span>Pink Noise</span>
-        </button>
-        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'brown')">
-            <span class="ambient-icon">🤎</span><span>Brown Noise</span>
-        </button>
-        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'rain')">
-            <span class="ambient-icon">🌧️</span><span>Rainstorm</span>
-        </button>
-        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'cafe')">
-            <span class="ambient-icon">☕</span><span>Café</span>
-        </button>
-        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'fire')">
-            <span class="ambient-icon">🔥</span><span>Fireplace</span>
-        </button>
-        <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'beta')">
-            <span class="ambient-icon">🧠</span><span>Beta Waves (14Hz)</span>
-        </button>
-    </div>
-</div>
+            <h3>Ambient Sounds</h3>
+            <p class="ambient-sub">Select background audio for concentration</p>
+            
+            <div class="ambient-grid">
+                <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'pink')">
+                    <span class="ambient-icon">📻</span><span>Pink Noise</span>
+                </button>
+                <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'brown')">
+                    <span class="ambient-icon">🤎</span><span>Brown Noise</span>
+                </button>
+                <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'rain')">
+                    <span class="ambient-icon">🌧️</span><span>Rainstorm</span>
+                </button>
+                <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'cafe')">
+                    <span class="ambient-icon">☕</span><span>Café</span>
+                </button>
+                <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'fire')">
+                    <span class="ambient-icon">🔥</span><span>Fireplace</span>
+                </button>
+                <button type="button" class="ambient-btn" onclick="toggleAudio(this, 'beta')">
+                    <span class="ambient-icon">🧠</span><span>Beta Waves (14Hz)</span>
+                </button>
+            </div>
+        </div>
 
-
+        <audio id="audioPink" src="{{ url_for('static', filename='audio/pink.mp3') }}" loop preload="none"></audio>
+        <audio id="audioBrown" src="{{ url_for('static', filename='audio/brown.mp3') }}" loop preload="none"></audio>
         <audio id="audioRain" src="{{ url_for('static', filename='audio/rain.mp3') }}" loop preload="none"></audio>
-<audio id="audioLofi" src="{{ url_for('static', filename='audio/brown.mp3') }}" loop preload="none"></audio>
-<audio id="audioWaves" src="{{ url_for('static', filename='audio/pink.mp3') }}" loop preload="none"></audio>
-<audio id="audioForest" src="{{ url_for('static', filename='audio/beta.mp3') }}" loop preload="none"></audio>
-<audio id="audioCafe" src="{{ url_for('static', filename='audio/cafe.mp3') }}" loop preload="none"></audio>
-<audio id="audioFire" src="{{ url_for('static', filename='audio/fire.mp3') }}" loop preload="none"></audio>
-        
+        <audio id="audioCafe" src="{{ url_for('static', filename='audio/cafe.mp3') }}" loop preload="none"></audio>
+        <audio id="audioFire" src="{{ url_for('static', filename='audio/fire.mp3') }}" loop preload="none"></audio>
+        <audio id="audioBeta" src="{{ url_for('static', filename='audio/beta.mp3') }}" loop preload="none"></audio>
+    </section>
+
     <script src="{{ url_for('static', filename='study.js') }}"></script>
 </body>
 </html>
