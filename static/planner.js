@@ -41,6 +41,10 @@ function openModal() {
     document.getElementById("modalPriority").value = "2";
     document.getElementById("modalDueTime").value = "23:59";
     
+    // Clear notes if the element exists
+    const notesInput = document.getElementById("modalNotes");
+    if (notesInput) notesInput.value = "";
+    
     modal.classList.add("active", "open");
     modal.style.display = "flex";
 }
@@ -68,7 +72,9 @@ function editTask(id, title, subject, minutes, priority, dueDate, dueTime, notes
     document.getElementById("modalPriority").value = String(priority ?? 2);
     document.getElementById("modalDueDate").value = dueDate ?? "";
     document.getElementById("modalDueTime").value = dueTime || "23:59";
-    document.getElementById("modalNotes").value = notes ?? "";
+    
+    const notesInput = document.getElementById("modalNotes");
+    if (notesInput) notesInput.value = notes ?? "";
 
     modal.classList.add("active", "open");
     modal.style.display = "flex";
@@ -211,22 +217,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             applyFilters();
         });
-    });
-
-    document.getElementById("search")?.addEventListener("keydown", async e => {
-        if (e.key === "Enter" && e.target.value.includes("p")) {
-            e.preventDefault();
-            const val = e.target.value.trim();
-            if (!val) return;
-
-            try {
-                await apiRequest("/planner/add", "POST", { title: val });
-                e.target.value = "";
-                window.location.reload();
-            } catch (err) {
-                alert(err.message);
-            }
-        }
     });
 
     document.getElementById("search")?.addEventListener("input", applyFilters);
