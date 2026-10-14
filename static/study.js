@@ -408,17 +408,16 @@ let activeBtn = null;
 /**
  * Toggles ambient audio playback.
  * @param {HTMLElement} btnElement - The button element passed via `this` in HTML
- * @param {string} type - Sound identifier (e.g., 'pink', 'rain')
+ * @param {string} type - Sound identifier (e.g., 'pink', 'brown', 'rain', 'cafe', 'fire', 'beta')
  */
 function toggleAudio(btnElement, type) {
-    // Map audio keys to existing <audio> element IDs in templates/study.html
     const audioMap = {
-        pink: "audioRain",
-        brown: "audioLofi",
-        rain: "audioWaves",
-        cafe: "audioForest",
-        fire: "audioCafe",
-        beta: "audioFire"
+        pink: "audioPink",
+        brown: "audioBrown",
+        rain: "audioRain",
+        cafe: "audioCafe",
+        fire: "audioFire",
+        beta: "audioBeta"
     };
 
     const targetAudioId = audioMap[type] || `audio${type.charAt(0).toUpperCase() + type.slice(1)}`;
