@@ -68,6 +68,7 @@ def init_db():
                 parent_id INTEGER DEFAULT NULL,
                 title TEXT NOT NULL,
                 subject TEXT DEFAULT 'General',
+                notes TEXT DEFAULT '',
                 due_date TEXT DEFAULT NULL,
                 due_time TEXT DEFAULT NULL,
                 estimated_minutes INTEGER DEFAULT 30,
@@ -79,10 +80,6 @@ def init_db():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(parent_id) REFERENCES planner_tasks(id) ON DELETE CASCADE,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-                title TEXT NOT NULL,
-                subject TEXT DEFAULT 'General',
-                notes TEXT DEFAULT '',
-                due_date TEXT DEFAULT NULL,
             );
 
             CREATE TABLE IF NOT EXISTS focus_sessions (
@@ -371,6 +368,7 @@ def insert_achievements(conn):
                requirement_value = excluded.requirement_value""",
         achievements,
     )
+
 
 if __name__ == "__main__":
     init_db()
