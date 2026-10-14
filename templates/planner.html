@@ -86,7 +86,7 @@
     <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
 
     <button type="button" class="glass-btn" 
-            onclick="editTask({{ task.id }}, '{{ task.title | replace("'", "\\'") }}', '{{ (task.subject or '') | replace("'", "\\'") }}', {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, '{{ task.due_date or '' }}', '{{ task.due_time or '' }}')">
+            onclick="editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or '') | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or '') | tojson }}, {{ (task.due_time or '') | tojson }}, {{ (task.notes or '') | tojson }})">
         Edit
     </button>
 
@@ -169,6 +169,10 @@
                 <div class="form-group">
                     <label for="modalSubject">Subject / Course</label>
                     <input type="text" id="modalSubject" class="glass-input" name="subject" placeholder="e.g., AP Computer Science">
+                </div>
+                <div class="form-group">
+                    <label for="modalNotes">Notes (optional)</label>
+                    <textarea id="modalNotes" class="glass-input" name="notes" rows="4" maxlength="5000" placeholder="Add instructions, reminders, or details for this task..."></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
