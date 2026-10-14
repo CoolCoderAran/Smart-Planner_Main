@@ -100,6 +100,7 @@ def validate_task_input(data):
         "estimated_minutes": estimated_minutes,
         "due_date": due_date,
         "due_time": due_time,
+        "notes": str(data.get("notes", "") or "").strip()[:5000],
     }, None
 
 
@@ -183,10 +184,10 @@ def add_task(user_id):
     cursor = conn.cursor()
     cursor.execute(
         """INSERT INTO planner_tasks
-           (user_id, title, subject, due_date, due_time, estimated_minutes, priority, completed, is_deleted)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)""",
+           (user_id, title, subject, due_date, due_time, estimated_minutes, priority, notes, completed, is_deleted)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""",
         (user_id, validated["title"], validated["subject"], validated["due_date"],
-         validated["due_time"], validated["estimated_minutes"], validated["priority"]),
+         validated["due_time"], validated["estimated_minutes"], validated["priority"], validated["notes"]),
     )
     task_id = cursor.lastrowid
     conn.commit()
@@ -212,11 +213,11 @@ def update_task(user_id, task_id):
     conn.execute(
         """UPDATE planner_tasks
            SET title = ?, subject = ?, due_date = ?, due_time = ?,
-               estimated_minutes = ?, priority = ?, updated_at = CURRENT_TIMESTAMP
+               estimated_minutes = ?, priority = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
            WHERE id = ? AND user_id = ? AND is_deleted = 0""",
         (validated["title"], validated["subject"], validated["due_date"],
          validated["due_time"], validated["estimated_minutes"], validated["priority"],
-         task_id, user_id),
+         validated["notes"], task_id, user_id),
     )
     conn.commit()
     return jsonify({"success": True, "task": _task_response(conn, task_id, user_id)})
