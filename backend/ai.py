@@ -422,7 +422,7 @@ def query_terra_ai(user_query, task_context):
         )
 
         response = client.chat.completions.create(
-            model="gpt-5.6-luna",
+            model="gpt-6-luna",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_instructions},
