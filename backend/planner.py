@@ -29,13 +29,11 @@ def parse_natural_language_input(title_str):
     due_date = None
     due_time = "23:59"
 
-    # Extract Priority (p1, p2, p3)
     prio_match = re.search(r'\b[pP]([1-3])\b', title_str)
     if prio_match:
         priority = int(prio_match.group(1))
         title_str = re.sub(r'\b[pP][1-3]\b', '', title_str)
 
-    # Extract Date Shortcuts
     lower_title = title_str.lower()
     today_dt = datetime.now(timezone.utc).date()
     if "today" in lower_title:
@@ -62,7 +60,7 @@ def validate_task_input(data):
     subject = str(data.get("subject", "General")).strip()[:100] or "General"
 
     raw_priority = data.get("priority", parsed_prio)
-    priority_map = {"1": 1, "2": 2, "3": 3, 1: 1, 2: 2, 3: 3, "High": 1, "Medium": 2, "Low": 3}
+    priority_map = {"1": 1, "2": 2, "3": 3, 1: 1, 2: 2, 3: 3}
     priority = priority_map.get(raw_priority, parsed_prio)
 
     raw_minutes = data.get("estimated_minutes", 30)
@@ -74,10 +72,8 @@ def validate_task_input(data):
         return None, "Estimated minutes must be between 1 and 1440."
 
     raw_date = str(data.get("due_date") or parsed_date or "").strip()
-    if not raw_date or raw_date.lower() in ("none", "null"):
+    if not raw_date:
         due_date = None
-    elif raw_date.lower() == "today":
-        due_date = _utc_today()
     else:
         try:
             due_date = datetime.strptime(raw_date, "%Y-%m-%d").date().isoformat()
@@ -85,7 +81,7 @@ def validate_task_input(data):
             return None, "Invalid due date format. Expected YYYY-MM-DD."
 
     raw_time = str(data.get("due_time") or parsed_time or "").strip()
-    if not raw_time or raw_time.lower() in ("none", "null"):
+    if not raw_time:
         due_time = None
     else:
         try:
@@ -175,7 +171,7 @@ def planner_index(user_id):
 @planner_bp.route("/add", methods=["POST"])
 @require_auth
 def add_task(user_id):
-    payload = request.get_json(silent=True) or request.form.to_dict()
+    payload = request.get_json(silent=True) or {}
     validated, error = validate_task_input(payload)
     if error:
         return api_error(error, "VALIDATION_ERROR", 400)
@@ -199,7 +195,7 @@ def add_task(user_id):
 @planner_bp.route("/update/<int:task_id>", methods=["POST"])
 @require_auth
 def update_task(user_id, task_id):
-    payload = request.get_json(silent=True) or request.form.to_dict()
+    payload = request.get_json(silent=True) or {}
     conn = get_db()
 
     row = require_owned_row(conn, "planner_tasks", task_id, user_id)
@@ -239,7 +235,6 @@ def toggle_task(user_id, task_id):
         (new_status, completed_at, task_id),
     )
     
-    # Cascade completion state to all child subtasks
     conn.execute(
         "UPDATE planner_tasks SET completed = ?, completed_at = ? WHERE parent_id = ?",
         (new_status, completed_at, task_id),
@@ -269,7 +264,7 @@ def delete_task(user_id, task_id):
 @planner_bp.route("/subtask/add", methods=["POST"])
 @require_auth
 def add_subtask(user_id):
-    payload = request.get_json(silent=True) or request.form.to_dict()
+    payload = request.get_json(silent=True) or {}
     parent_id = payload.get("parent_id")
 
     try:
