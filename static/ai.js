@@ -1,10 +1,20 @@
 // ==========================================
 // TERRA AI ASSISTANT FRONTEND CONTROLLER
-// Handles UI state, proposals, AJAX & localStorage persistence
+// Handles UI state, proposals, AJAX & user-scoped localStorage persistence
 // ==========================================
 
-const CHAT_STORAGE_KEY = "terra_chat_history";
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
+/**
+ * Dynamically resolves a unique storage key per user so chat history
+ * is never shared across different user accounts on the same browser.
+ */
+function getStorageKey() {
+    // Read username from navbar or body data attribute if available
+    const usernameEl = document.querySelector('.account-username') || document.querySelector('.username');
+    const username = usernameEl ? usernameEl.textContent.trim().toLowerCase() : "default";
+    return `terra_chat_history_${username}`;
+}
 
 let pendingTaskProposal = null;
 let pendingSchedule = [];
@@ -41,11 +51,12 @@ function escapeHtml(str) {
 }
 
 /**
- * Retrieves saved chat messages from localStorage.
+ * Retrieves saved chat messages for the active user from localStorage.
  */
 function getStoredMessages() {
     try {
-        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        const key = getStorageKey();
+        const raw = localStorage.getItem(key);
         return raw ? JSON.parse(raw) : [];
     } catch (e) {
         console.error("Failed to parse chat history from localStorage:", e);
@@ -54,24 +65,26 @@ function getStoredMessages() {
 }
 
 /**
- * Appends a message object to localStorage.
+ * Appends a message object to the active user's localStorage history.
  */
 function appendToStoredHistory(msgObj) {
     const history = getStoredMessages();
     history.push(msgObj);
     try {
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(history));
+        const key = getStorageKey();
+        localStorage.setItem(key, JSON.stringify(history));
     } catch (e) {
         console.error("Failed to save chat message to localStorage:", e);
     }
 }
 
 /**
- * Clears saved chat history from localStorage and resets UI.
+ * Clears saved chat history for the active user from localStorage and resets UI.
  */
 function clearChatHistory() {
     if (confirm("Are you sure you want to clear your chat history with Terra?")) {
-        localStorage.removeItem(CHAT_STORAGE_KEY);
+        const key = getStorageKey();
+        localStorage.removeItem(key);
         const chatContainer = document.getElementById("chatMessages");
         if (chatContainer) {
             chatContainer.innerHTML = `
@@ -95,7 +108,7 @@ function clearChatHistory() {
 }
 
 /**
- * Restores saved chat bubbles from localStorage on page load.
+ * Restores saved chat bubbles from localStorage on page load for current user.
  */
 function restoreChatHistoryUI() {
     const history = getStoredMessages();
