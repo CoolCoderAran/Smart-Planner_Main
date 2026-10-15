@@ -36,7 +36,7 @@
     padding: 0.75rem 1.1rem;
     border-radius: 12px;
     border: 1px solid var(--card-border);
-    background: var(--card-bg-hover, rgba(255, 255, 255, 0.6));
+    background: var(--card-bg-hover, rgba(0, 0, 0, 0.04));
     color: var(--text-title);
     font-size: 0.92rem;
     transition: all 0.2s ease;
@@ -289,6 +289,8 @@
     font-size: 0.88rem;
     border-radius: 8px;
     border: 1px solid var(--card-border, #d1d5db);
+    background: var(--card-bg-hover, rgba(0, 0, 0, 0.04));
+    color: var(--text-title);
 }
 
 /* ==========================================================================
@@ -374,19 +376,25 @@
     margin-bottom: 0.4rem;
 }
 
-.glass-input, select.glass-input {
+.glass-input,
+select.glass-input,
+textarea.glass-input {
     width: 100%;
     padding: 0.75rem 1rem;
     border-radius: 10px;
     border: 1px solid var(--card-border, #d1d5db);
-    background: var(--card-bg, #ffffff);
+    background: var(--card-bg-hover, rgba(0, 0, 0, 0.04));
     color: var(--text-title);
     font-size: 0.92rem;
+    font-family: inherit;
     box-sizing: border-box;
     transition: all 0.2s ease;
+    resize: vertical;
 }
 
-.glass-input:focus {
+.glass-input:focus,
+select.glass-input:focus,
+textarea.glass-input:focus {
     outline: none;
     border-color: var(--accent, #6366f1);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
