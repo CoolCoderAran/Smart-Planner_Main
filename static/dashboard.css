@@ -213,3 +213,45 @@
 @media (max-width: 500px) {
     .stats-row { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   DASHBOARD RESPONSIVE FIXES
+   ========================================================================== */
+@media (max-width: 900px) {
+    .dashboard-grid {
+        padding: 16px 12px;
+        gap: 16px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .dashboard-main-layout,
+    .dashboard-tri-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 430px) {
+    .stats-row {
+        grid-template-columns: 1fr;
+    }
+
+    .header-actions {
+        width: 100%;
+    }
+
+    .header-actions a {
+        flex: 1;
+        justify-content: center;
+    }
+}
