@@ -1134,7 +1134,7 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
         existing_event = cursor.fetchone()
 
         if existing_event:
-            event_id, planner_task_id = existing_event[0], existing_event[1]
+            event_id, planner_task_id = existing_event["id"], existing_event["planner_task_id"]
 
             if not planner_task_id:
                 # Insert as a standalone top-level task
