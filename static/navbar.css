@@ -296,3 +296,98 @@
     font-size: 0.88rem;
     font-weight: 600;
 }
+
+/* ==========================================================================
+   RESPONSIVE NAVBAR & MOBILE OVERLAY MENU
+   ========================================================================== */
+@media (max-width: 768px) {
+    .app-navbar {
+        padding: 8px 12px;
+    }
+
+    .nav-inner {
+        height: 52px;
+        padding: 0 12px;
+        position: relative;
+    }
+
+    /* Mobile Menu Toggle Button */
+    .nav-mobile-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        background: var(--nav-chip-bg);
+        border: 1px solid var(--nav-chip-border);
+        border-radius: 8px;
+        color: var(--nav-text-active);
+        cursor: pointer;
+        font-size: 1.2rem;
+        z-index: 1002;
+    }
+
+    /* Fullscreen/Slide Overlay for Navigation Pills */
+    .nav-center {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background: var(--nav-bg);
+        border-left: 1px solid var(--nav-border);
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        padding: 80px 20px 20px 20px;
+        gap: 12px;
+        transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 1001;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+    }
+
+    /* Active Overlay State */
+    .nav-center.is-open {
+        right: 0;
+    }
+
+    .nav-pill {
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px;
+        font-size: 1rem;
+        border-radius: 10px;
+    }
+
+    /* Overlay Backdrop Blur Filter */
+    .nav-overlay-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+    }
+
+    .nav-overlay-backdrop.is-open {
+        display: block;
+    }
+
+    .account-dropdown {
+        left: 0;
+        right: auto;
+        width: 200px;
+    }
+}
+
+@media (min-width: 769px) {
+    .nav-mobile-toggle,
+    .nav-overlay-backdrop {
+        display: none !important;
+    }
+}
