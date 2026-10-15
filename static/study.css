@@ -246,3 +246,58 @@ select.glass-input option {
     gap: 12px;
     margin-bottom: 14px;
 }
+
+/* ==========================================================================
+   STUDY & FOCUS MODULE RESPONSIVE FIXES
+   ========================================================================== */
+@media (max-width: 768px) {
+    .study-container,
+    .study-bottom-section {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 0 12px;
+        margin: 16px auto;
+    }
+
+    .timer-ring {
+        width: 220px;
+        height: 220px;
+        min-width: 220px;
+        min-height: 220px;
+    }
+
+    #timerDisplay {
+        font-size: 3.2rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .ambient-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .control-btn-group button {
+        min-height: 44px;
+        padding: 10px 16px;
+    }
+}
+
+@media (max-width: 380px) {
+    .timer-ring {
+        width: 180px;
+        height: 180px;
+        min-width: 180px;
+        min-height: 180px;
+    }
+
+    #timerDisplay {
+        font-size: 2.6rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
