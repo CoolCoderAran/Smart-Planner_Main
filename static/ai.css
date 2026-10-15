@@ -342,3 +342,42 @@
     border-color: var(--accent-hover);
     transform: translateY(-1px);
 }
+
+/* ==========================================================================
+   TERRA AI RESPONSIVE LAYOUT
+   ========================================================================== */
+@media (max-width: 900px) {
+    .ai-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        padding: 12px;
+        gap: 16px;
+    }
+
+    .chat-card {
+        height: 550px;
+    }
+
+    .proposal-card {
+        height: auto;
+        min-height: 300px;
+    }
+
+    .message {
+        max-width: 90%;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-card {
+        height: 480px;
+    }
+
+    .chat-messages {
+        padding: 12px;
+    }
+
+    .chat-input-area {
+        padding: 10px 12px;
+    }
+}
