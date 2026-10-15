@@ -262,3 +262,122 @@
 @media (prefers-reduced-motion: reduce) {
     .calendar-header button, .calendar-task-badge, .calendar-day { transition: none; }
 }
+
+/* ==========================================================================
+   COMPRESSED CALENDAR TASK BADGES & MOBILE GRID
+   ========================================================================== */
+@media (max-width: 620px) {
+    .calendar-page-wrapper {
+        width: 100%;
+        padding: 0 8px;
+        margin: 8px auto;
+    }
+
+    .calendar-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .calendar-nav-controls, 
+    .calendar-view-picker {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .calendar-nav-controls h2 {
+        min-width: auto;
+        font-size: 1rem;
+    }
+
+    .calendar-grid {
+        gap: 3px;
+    }
+
+    .calendar-day {
+        min-height: 70px;
+        padding: 4px;
+        border-radius: 6px;
+    }
+
+    .day-header {
+        margin-bottom: 2px;
+    }
+
+    .day-number {
+        font-size: 0.72rem;
+    }
+
+    .workload-tag {
+        font-size: 0.55rem;
+        padding: 1px 3px;
+    }
+}
+
+/* Compressed Dot Badges for Mobile (< 480px) */
+@media (max-width: 480px) {
+    .day-tasks {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 3px;
+        max-height: 40px;
+        overflow: hidden;
+    }
+
+    .calendar-task-badge {
+        width: 8px;
+        height: 8px;
+        min-width: 8px;
+        padding: 0;
+        border-radius: 50%;
+        border: none !important;
+        font-size: 0;
+        line-height: 0;
+        cursor: pointer;
+    }
+
+    .calendar-task-badge .badge-title,
+    .calendar-task-badge .badge-time {
+        display: none !important;
+    }
+
+    .calendar-task-badge.priority-high {
+        background: var(--priority-high) !important;
+    }
+
+    .calendar-task-badge.priority-medium {
+        background: var(--priority-medium) !important;
+    }
+
+    .calendar-task-badge.priority-low {
+        background: var(--priority-low) !important;
+    }
+
+    .calendar-task-badge.completed {
+        background: var(--text-muted) !important;
+        opacity: 0.4;
+    }
+
+    /* Full display expansion when in single-day or week view */
+    .calendar-grid.view-day .day-tasks,
+    .calendar-grid.view-week .day-tasks {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        max-height: none;
+    }
+
+    .calendar-grid.view-day .calendar-task-badge,
+    .calendar-grid.view-week .calendar-task-badge {
+        width: 100%;
+        height: auto;
+        padding: 4px 6px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+    }
+
+    .calendar-grid.view-day .calendar-task-badge .badge-title,
+    .calendar-grid.view-week .calendar-task-badge .badge-title {
+        display: inline !important;
+    }
+}
