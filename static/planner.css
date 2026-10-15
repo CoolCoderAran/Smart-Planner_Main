@@ -455,3 +455,143 @@
     font-size: 0.82rem;
     border-radius: 8px;
 }
+
+/* ==========================================================================
+   RESPONSIVE MEDIA QUERIES FOR ALL SCREEN SIZES
+   ========================================================================== */
+
+/* Tablets & Small Laptops (Max Width: 992px) */
+@media screen and (max-width: 992px) {
+    .main-container {
+        padding: 1.5rem 1rem;
+    }
+    
+    .planner-header {
+        padding: 1.25rem;
+    }
+}
+
+/* Tablets & Mobile Devices (Max Width: 768px) */
+@media screen and (max-width: 768px) {
+    .toolbar-row {
+        flex-wrap: wrap;
+    }
+    
+    .search-bar {
+        order: 1;
+        width: 100%;
+        flex: 1 0 100%;
+    }
+
+    .toolbar-row .open-btn,
+    .toolbar-row .add-task-btn {
+        order: 2;
+    }
+
+    .filter-bar {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0.25rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-btn {
+        flex-shrink: 0;
+    }
+
+    .task-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .task-left-content {
+        width: 100%;
+    }
+
+    .task-actions {
+        width: 100%;
+        justify-content: flex-end;
+        opacity: 1;
+        padding-top: 0.5rem;
+        border-top: 1px dashed var(--card-border, rgba(0, 0, 0, 0.08));
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .batch-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .batch-bar span {
+        text-align: center;
+    }
+
+    .subtask-tree {
+        padding-left: 0.75rem;
+    }
+
+    .inline-subtask-form {
+        padding-left: 0.75rem;
+    }
+}
+
+/* Mobile Screens (Max Width: 480px) */
+@media screen and (max-width: 480px) {
+    .main-container {
+        padding: 1rem 0.75rem;
+    }
+
+    .planner-header {
+        padding: 1rem;
+        border-radius: 12px;
+    }
+
+    .task-card {
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+    }
+
+    .task-actions {
+        flex-wrap: wrap;
+    }
+
+    .task-actions .glass-btn {
+        flex: 1;
+        text-align: center;
+    }
+
+    .inline-subtask-form {
+        flex-direction: column;
+    }
+
+    .inline-subtask-form .glass-btn {
+        width: 100%;
+    }
+
+    .modal-content {
+        padding: 1.25rem;
+        border-radius: 16px;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions .glass-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Large Screens & Ultra-Wide Displays (Min Width: 1200px) */
+@media screen and (min-width: 1200px) {
+    .main-container {
+        max-width: 1280px;
+    }
+}
