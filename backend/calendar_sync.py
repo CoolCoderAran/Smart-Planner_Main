@@ -1435,3 +1435,67 @@ def google_sync(user_id):
         "pulled": pulled,
         "pushed": pushed,
     }), 200
+
+def sync_google_events_to_planner(cursor, user_id, google_events):
+    """
+    Syncs Google Calendar events and automatically converts them into Planner tasks.
+    """
+    for g_event in google_events:
+        google_event_id = g_event.get("id")
+        title = g_event.get("summary", "Untitled Google Event")
+        description = g_event.get("description", "")
+        
+        # Parse start date & time from Google event payload
+        start = g_event.get("start", {})
+        start_date_str = start.get("date") or start.get("dateTime", "")[:10]
+        start_time_str = start.get("dateTime", "")[11:16] if "T" in start.get("dateTime", "") else None
+
+        # 1. Check if event already exists in SQLite DB
+        cursor.execute("""
+            SELECT id, planner_task_id FROM events 
+             WHERE user_id = ? AND google_event_id = ? AND is_deleted = 0
+        """, (user_id, google_event_id))
+        existing_event = cursor.fetchone()
+
+        if existing_event:
+            event_id, planner_task_id = existing_event
+
+            # If event exists but has no linked planner_task, auto-create one
+            if not planner_task_id:
+                cursor.execute("""
+                    INSERT INTO planner_tasks 
+                        (user_id, title, notes, due_date, due_time, subject, priority, completed)
+                    VALUES (?, ?, ?, ?, ?, 'Google Calendar', 2, 0)
+                """, (user_id, title, description, start_date_str, start_time_str))
+                
+                new_task_id = cursor.lastrowid
+
+                # Link the event to the newly created planner task
+                cursor.execute("""
+                    UPDATE events SET planner_task_id = ? WHERE id = ?
+                """, (new_task_id, event_id))
+
+        else:
+            # 2. Fully new Google event: Create Planner Task first
+            cursor.execute("""
+                INSERT INTO planner_tasks 
+                    (user_id, title, notes, due_date, due_time, subject, priority, completed)
+                VALUES (?, ?, ?, ?, ?, 'Google Calendar', 2, 0)
+            """, (user_id, title, description, start_date_str, start_time_str))
+            
+            new_task_id = cursor.lastrowid
+
+            # 3. Insert Event record linked to the new Planner Task
+            cursor.execute("""
+                INSERT INTO events 
+                    (user_id, planner_task_id, title, description, start_time, end_time, google_event_id, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'google')
+            """, (
+                user_id, 
+                new_task_id, 
+                title, 
+                description, 
+                g_event.get("start", {}).get("dateTime", start_date_str),
+                g_event.get("end", {}).get("dateTime", start_date_str),
+                google_event_id
+            ))
