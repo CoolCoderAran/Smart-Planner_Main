@@ -94,7 +94,7 @@
                     {% if display_tasks %}
                         {% for task in display_tasks %}
                         <div class="task-item {% if task.completed %}is-completed{% endif %}">
-                            <form method="POST" action="{{ url_for('planner_bp.toggle_task', task_id=task.id) }}" class="inline-form">
+                            <form method="POST" action="{{ url_for('planner.toggle_task', task_id=task.id) }}" class="inline-form">
                                 {% if csrf_token is defined %}
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 {% endif %}
