@@ -114,14 +114,8 @@
     visibility: hidden;
     transform: translateY(6px);
     transition: all 0.2s ease;
-
-   backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    
-    border: 1px solid var(--nav-dropdown-border);
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
 }
 
 /* Invisible hover bridge to prevent menu closing on move */
@@ -298,7 +292,7 @@
 }
 
 /* ==========================================================================
-   RESPONSIVE NAVBAR & MOBILE OVERLAY MENU
+   RESPONSIVE PURE-CSS OVERLAY MENU (NO HTML MODIFICATIONS)
    ========================================================================== */
 @media (max-width: 768px) {
     .app-navbar {
@@ -311,83 +305,71 @@
         position: relative;
     }
 
-    /* Mobile Menu Toggle Button */
-    .nav-mobile-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 38px;
-        height: 38px;
-        background: var(--nav-chip-bg);
-        border: 1px solid var(--nav-chip-border);
-        border-radius: 8px;
-        color: var(--nav-text-active);
-        cursor: pointer;
-        font-size: 1.2rem;
-        z-index: 1002;
-    }
-
-    /* Fullscreen/Slide Overlay for Navigation Pills */
+    /* Style existing nav-center container as a slide-out drawer handle */
     .nav-center {
         position: fixed;
-        top: 0;
-        right: -100%;
-        width: 280px;
-        height: 100vh;
-        background: var(--nav-bg);
-        border-left: 1px solid var(--nav-border);
-        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
-        flex-direction: column;
-        align-items: stretch;
-        justify-content: flex-start;
-        padding: 80px 20px 20px 20px;
-        gap: 12px;
-        transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        top: 68px;
+        right: 12px;
+        width: 48px;
+        height: 48px;
+        background: var(--nav-chip-bg);
+        border: 1px solid var(--nav-border);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
         z-index: 1001;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        padding: 6px;
+        gap: 8px;
+        transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease, box-shadow 0.3s ease;
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
     }
 
-    /* Active Overlay State */
-    .nav-center.is-open {
-        right: 0;
+    /* Hamburger icon displayed on collapsed button */
+    .nav-center::before {
+        content: "☰";
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        font-size: 1.2rem;
+        color: var(--nav-text-active);
+        cursor: pointer;
     }
 
+    /* Expand into full overlay drawer on hover, tap, or focus */
+    .nav-center:hover,
+    .nav-center:focus-within {
+        width: 240px;
+        height: auto;
+        padding: 12px;
+        border-radius: 16px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Hide hamburger icon when drawer is expanded */
+    .nav-center:hover::before,
+    .nav-center:focus-within::before {
+        display: none;
+    }
+
+    /* Stack links vertically inside expanded drawer */
     .nav-pill {
         width: 100%;
         text-align: left;
-        padding: 12px 16px;
-        font-size: 1rem;
-        border-radius: 10px;
-    }
-
-    /* Overlay Backdrop Blur Filter */
-    .nav-overlay-backdrop {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-        z-index: 1000;
-    }
-
-    .nav-overlay-backdrop.is-open {
-        display: block;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        border-radius: 8px;
+        white-space: nowrap;
     }
 
     .account-dropdown {
         left: 0;
         right: auto;
         width: 200px;
-    }
-}
-
-@media (min-width: 769px) {
-    .nav-mobile-toggle,
-    .nav-overlay-backdrop {
-        display: none !important;
     }
 }
