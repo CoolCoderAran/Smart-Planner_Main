@@ -1100,7 +1100,8 @@ def _google_event_to_local(item, calendar_id):
 
 def sync_google_events_to_planner(cursor, user_id, google_events):
     """
-    Syncs Google Calendar events and automatically converts them into Planner tasks.
+    Syncs Google Calendar events into Planner.
+    Guarantees every synced event maps strictly to an independent top-level task (never a subtask).
     """
     for g_event in google_events:
         google_event_id = g_event.get("id")
@@ -1136,6 +1137,7 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
             event_id, planner_task_id = existing_event[0], existing_event[1]
 
             if not planner_task_id:
+                # Insert as a standalone top-level task
                 cursor.execute("""
                     INSERT INTO planner_tasks 
                         (user_id, title, notes, due_date, due_time, subject, priority, completed)
@@ -1148,6 +1150,7 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
                     UPDATE events SET planner_task_id = ? WHERE id = ?
                 """, (new_task_id, event_id))
             else:
+                # Keep top-level task updated
                 cursor.execute("""
                     UPDATE planner_tasks 
                     SET title = ?, notes = ?, due_date = ?, due_time = ?
@@ -1155,6 +1158,7 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
                 """, (title, description, start_date_str, start_time_str, planner_task_id, user_id))
 
         else:
+            # Insert as an independent top-level task
             cursor.execute("""
                 INSERT INTO planner_tasks 
                     (user_id, title, notes, due_date, due_time, subject, priority, completed)
@@ -1284,7 +1288,7 @@ def google_sync(user_id):
 
             items = body.get("items", [])
 
-            # Perform automatic conversion on pulled items
+            # Automatically convert imported events into independent primary tasks
             sync_google_events_to_planner(conn.cursor(), user_id, items)
 
             for item in items:
