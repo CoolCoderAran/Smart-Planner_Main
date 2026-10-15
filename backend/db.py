@@ -1,3 +1,27 @@
+import sqlite3
+from flask import g
+
+DATABASE_PATH = "planner.db"
+
+def _connect():
+    """Helper to create a new database connection with foreign keys enabled."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
+
+def get_db():
+    """Retrieves or creates a request-scoped database connection."""
+    if "db" not in g:
+        g.db = _connect()
+    return g.db
+
+def close_db(e=None):
+    """Closes the request-scoped database connection if open."""
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
+
 def init_db():
     """Initialize canonical database schema for a fresh start."""
     connection = _connect()
