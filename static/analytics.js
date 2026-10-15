@@ -44,7 +44,7 @@ function renderTrendsChart(trends) {
                 { label: "Focus Minutes", data: trends.focus_minutes, tension: 0.3, fill: false }
             ]
         },
-        options: { responsive: true }
+        options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
@@ -69,7 +69,7 @@ function renderSubjectChart(subjectData) {
                 }
             ]
         },
-        options: { responsive: true }
+        options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
@@ -86,33 +86,48 @@ function renderPriorityChart(priorityDist) {
                 data: [priorityDist.high || 0, priorityDist.medium || 0, priorityDist.low || 0]
             }]
         },
-        options: { responsive: true }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: 10
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 8
+                    }
+                }
+            }
+        }
     });
 }
 
 function renderAchievements(achievements) {
-  const container = document.getElementById('achievements-container');
-  if (!container) return;
-  container.innerHTML = '';
+    const container = document.getElementById('achievements-container');
+    if (!container) return;
+    container.innerHTML = '';
 
-  achievements.forEach(item => {
-    const card = document.createElement('div');
-    card.className = `achievement-card ${item.unlocked ? 'unlocked' : 'locked'}`;
-    
-    card.innerHTML = `
-      <div class="achievement-icon">${item.unlocked ? item.icon : '🔒'}</div>
-      <div class="achievement-info">
-        <h4>${escapeHTML(item.name)}</h4>
-        <p>${escapeHTML(item.desc)}</p>
-        ${item.unlocked && item.earned_at ? `<small class="earned-date">Unlocked ${item.earned_at.split('T')[0]}</small>` : '<small class="locked-text">Locked</small>'}
-      </div>
-    `;
-    container.appendChild(card);
-  });
+    achievements.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `achievement-card ${item.unlocked ? 'unlocked' : 'locked'}`;
+        
+        card.innerHTML = `
+            <div class="achievement-icon">${item.unlocked ? item.icon : '🔒'}</div>
+            <div class="achievement-info">
+                <h4>${escapeHTML(item.name)}</h4>
+                <p>${escapeHTML(item.desc)}</p>
+                ${item.unlocked && item.earned_at ? `<small class="earned-date">Unlocked ${item.earned_at.split('T')[0]}</small>` : '<small class="locked-text">Locked</small>'}
+            </div>
+        `;
+        container.appendChild(card);
+    });
 }
 
 function escapeHTML(str) {
-  return String(str || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[c]);
+    return String(str || '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
 }
