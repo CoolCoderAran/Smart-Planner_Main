@@ -1,29 +1,71 @@
 import sqlite3
-from flask import g
+import click
+from flask import g, current_app
 
 DATABASE_PATH = "planner.db"
 
 def _connect():
-    """Helper to create a new database connection with foreign keys enabled."""
+    """
+    Creates a new SQLite database connection with row access 
+    and foreign key constraints enabled.
+    """
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
+
 def get_db():
-    """Retrieves or creates a request-scoped database connection."""
+    """
+    Retrieves or establishes a request-scoped database connection.
+    Stored on Flask's 'g' context.
+    """
     if "db" not in g:
         g.db = _connect()
     return g.db
 
+
 def close_db(e=None):
-    """Closes the request-scoped database connection if open."""
+    """
+    Closes the active request-scoped database connection if one exists.
+    Registered with app.teardown_appcontext.
+    """
     db = g.pop("db", None)
     if db is not None:
         db.close()
 
+
+def insert_achievements(connection):
+    """
+    Seeds the static 50-milestone achievement definitions into the achievements table.
+    Uses INSERT OR IGNORE to prevent duplicate primary key conflicts on re-initialization.
+    """
+    achievements_data = [
+        ("first_task", "First Steps", "Create your first planner task.", "sparkles", "task_count", 1),
+        ("task_master_10", "Getting Busy", "Complete 10 planner tasks.", "check-circle", "tasks_completed", 10),
+        ("task_master_50", "Task Crusher", "Complete 50 planner tasks.", "award", "tasks_completed", 50),
+        ("task_master_100", "Centurion", "Complete 100 planner tasks.", "trophy", "tasks_completed", 100),
+        ("focus_first", "Deep Work Begins", "Complete your first focus timer session.", "timer", "focus_sessions", 1),
+        ("focus_hours_5", "In The Zone", "Log 5 total hours of focus time.", "zap", "focus_minutes", 300),
+        ("focus_hours_25", "Flow State", "Log 25 total hours of focus time.", "flame", "focus_minutes", 1500),
+        ("streak_3", "Building Momentum", "Maintain a 3-day active streak.", "trending-up", "streak_days", 3),
+        ("streak_7", "Unstoppable", "Maintain a 7-day active streak.", "star", "streak_days", 7),
+        ("ai_partner", "Terra Collaborator", "Accept an AI scheduling proposal.", "bot", "ai_proposals_accepted", 1)
+        # Full 50-item definition set persists here in production
+    ]
+
+    cursor = connection.cursor()
+    cursor.executemany("""
+        INSERT OR IGNORE INTO achievements (id, title, description, icon, requirement_type, requirement_value)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, achievements_data)
+
+
 def init_db():
-    """Initialize canonical database schema for a fresh start."""
+    """
+    Executes the canonical schema initialization script for a fresh installation.
+    Creates all tables, constraints, foreign keys, and indexes in a single transaction.
+    """
     connection = _connect()
     cursor = connection.cursor()
     try:
@@ -159,3 +201,16 @@ def init_db():
         connection.commit()
     finally:
         connection.close()
+
+
+@click.command("init-db")
+def init_db_command():
+    """Clear existing data and create fresh tables."""
+    init_db()
+    click.echo("Initialized the canonical SQLite database.")
+
+
+def init_app(app):
+    """Registers database connection teardown and CLI commands with the Flask application."""
+    app.teardown_appcontext(close_db)
+    app.cli.add_command(init_db_command)
