@@ -83,8 +83,11 @@
 
                 <div class="task-actions">
                     <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
-                    <button type="button" class="glass-btn" 
-                            onclick="editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or '') | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or '') | tojson }}, {{ (task.due_time or '') | tojson }}, {{ (task.notes or '') | tojson }})">
+                   <!-- FIXED (Single quotes surrounding the attribute value) -->
+<button type="button" class="glass-btn" 
+        onclick='editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or "") | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or "") | tojson }}, {{ (task.due_time or "") | tojson }}, {{ (task.notes or "") | tojson }})'>
+    Edit
+</button>
                         Edit
                     </button>
                     <button type="button" class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
