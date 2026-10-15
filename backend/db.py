@@ -26,22 +26,12 @@ def close_db(e=None):
         connection.close()
 
 
-def _columns(cursor, table):
-    return {row[1] for row in cursor.execute(f"PRAGMA table_info({table})")}
-
-
-def _add_column(cursor, table, definition):
-    name = definition.split()[0]
-    if name not in _columns(cursor, table):
-        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
-
-
 def init_db():
-    """Initialize the canonical schema and apply narrow compatibility migrations.
+    """Initialize the canonical database schema for fresh installations.
 
     UTC is the storage policy for timestamp fields. Date-only deadlines remain
-    date strings and are not converted into timestamps. due_date is nullable —
-    a NULL value means the task is unscheduled.
+    date strings (YYYY-MM-DD). due_date is nullable — a NULL value means
+    the task is unscheduled.
     """
     connection = _connect()
     cursor = connection.cursor()
@@ -64,7 +54,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS planner_tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT,
-                user_id INTEGER,
+                user_id INTEGER NOT NULL,
                 parent_id INTEGER DEFAULT NULL,
                 title TEXT NOT NULL,
                 subject TEXT DEFAULT 'General',
@@ -173,113 +163,6 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_ai_request_user_time
                 ON ai_request_log(user_id, requested_at);
         """)
-
-        # Narrow migrations for older installations.
-        for definition in (
-            "user_id INTEGER",
-            "subject TEXT DEFAULT 'General'",
-            "due_time TEXT DEFAULT NULL",
-            "priority INTEGER DEFAULT 2",
-            "completed INTEGER DEFAULT 0",
-            "completed_at TIMESTAMP",
-            "is_deleted INTEGER DEFAULT 0",
-            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-        ):
-            _add_column(cursor, "planner_tasks", definition)
-
-        for definition in (
-            "user_id INTEGER",
-            "started_at TIMESTAMP",
-            "completed_at TIMESTAMP",
-            "duration_minutes INTEGER DEFAULT 0",
-            "status TEXT DEFAULT 'completed'",
-            "mode TEXT DEFAULT 'pomodoro'",
-            "paused_at TIMESTAMP",
-            "total_paused_seconds INTEGER NOT NULL DEFAULT 0",
-            "note TEXT DEFAULT NULL",
-        ):
-            _add_column(cursor, "focus_sessions", definition)
-
-        for definition in (
-            "user_id INTEGER",
-            "planner_task_id INTEGER",
-            "description TEXT DEFAULT ''",
-            "location TEXT DEFAULT ''",
-            "category TEXT DEFAULT 'General'",
-            "is_all_day INTEGER DEFAULT 0",
-            "source TEXT DEFAULT 'calendar'",
-            "google_event_id TEXT",
-            "is_deleted INTEGER DEFAULT 0",
-            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-        ):
-            _add_column(cursor, "events", definition)
-
-        for definition in (
-            "email TEXT",
-            "display_name TEXT",
-            "default_focus_mins INTEGER DEFAULT 25",
-            "break_mins INTEGER DEFAULT 5",
-            "ai_tone TEXT DEFAULT 'balanced'",
-            "timezone TEXT DEFAULT 'UTC'",
-            "focus_notes TEXT DEFAULT NULL",
-        ):
-            _add_column(cursor, "users", definition)
-
-        for definition in (
-            "requirement_type TEXT",
-            "requirement_value INTEGER",
-        ):
-            _add_column(cursor, "achievements", definition)
-
-        # Backfill canonical immutable IDs from legacy username relationships.
-        cursor.execute("""
-            UPDATE planner_tasks
-               SET user_id = (SELECT id FROM users WHERE users.username = planner_tasks.username)
-             WHERE user_id IS NULL AND username IS NOT NULL
-        """)
-        cursor.execute("""
-            UPDATE focus_sessions
-               SET user_id = (SELECT id FROM users WHERE users.username = focus_sessions.username)
-             WHERE user_id IS NULL AND username IS NOT NULL
-        """)
-        cursor.execute("""
-            UPDATE events
-               SET user_id = (SELECT id FROM users WHERE users.username = events.username)
-             WHERE user_id IS NULL AND username IS NOT NULL
-        """)
-
-        # Normalize historical priority representations.
-        cursor.execute("""
-            UPDATE planner_tasks
-               SET priority = CASE LOWER(CAST(priority AS TEXT))
-                   WHEN 'high' THEN 1
-                   WHEN 'medium' THEN 2
-                   WHEN 'low' THEN 3
-                   ELSE CAST(priority AS INTEGER)
-               END
-             WHERE priority IS NOT NULL
-        """)
-
-        # Re-map legacy user_achievements tables if username key exists.
-        legacy_cols = _columns(cursor, "user_achievements")
-        if "username" in legacy_cols and "user_id" not in legacy_cols:
-            cursor.execute("ALTER TABLE user_achievements RENAME TO user_achievements_legacy")
-            cursor.execute("""
-                CREATE TABLE user_achievements (
-                    user_id INTEGER NOT NULL,
-                    achievement_id TEXT NOT NULL,
-                    earned_at TIMESTAMP NOT NULL,
-                    PRIMARY KEY(user_id, achievement_id),
-                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY(achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
-                )
-            """)
-            cursor.execute("""
-                INSERT OR IGNORE INTO user_achievements(user_id, achievement_id, earned_at)
-                SELECT u.id, ua.achievement_id, ua.earned_at
-                  FROM user_achievements_legacy ua
-                  JOIN users u ON u.username = ua.username
-            """)
 
         insert_achievements(connection)
         connection.commit()
