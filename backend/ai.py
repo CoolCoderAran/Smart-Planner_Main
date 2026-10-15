@@ -37,28 +37,11 @@ MAX_DAILY_REQUESTS = 50
 MAX_SHORT_TERM_REQUESTS = 10
 SHORT_TERM_SECONDS = 60
 
-ALLOWED_KEYWORDS = [
-    "task", "planner", "calendar", "schedule", "focus", "analytics",
-    "due", "overdue", "priority", "study", "workload", "behind",
-    "time", "organize", "deadline", "streak", "breakdown", "plan",
-]
-
 EXTRACTION_TRIGGERS = [
     "system prompt",
     "system instructions",
     "repeat everything above",
     "ignore previous",
-]
-
-BLOCKED_PATTERNS = [
-    r"tell me a story",
-    r"write an essay",
-    r"write code",
-    r"solve my homework",
-    r"who is",
-    r"what is the capital",
-    r"play a game",
-    r"ignore previous instructions",
 ]
 
 
@@ -67,7 +50,6 @@ def _json_error(message, code, status):
 
 
 def _auth_redirect():
-    """Match app.py's behavior for unauthenticated page and API requests."""
     if request.method in {"POST", "PUT", "PATCH", "DELETE"} and (
         request.path.startswith("/api/")
         or request.is_json
@@ -107,12 +89,7 @@ def ai_chat():
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = (
-        request.get_json(silent=True)
-        if request.is_json
-        else request.form
-    ) or {}
-
+    data = request.get_json(silent=True) or {}
     user_query = str(data.get("query", "")).strip()
     if not user_query:
         return _json_error("Query cannot be empty.", "QUERY_REQUIRED", 400)
@@ -184,12 +161,7 @@ def accept_proposed_task():
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = (
-        request.get_json(silent=True)
-        if request.is_json
-        else request.form
-    ) or {}
-
+    data = request.get_json(silent=True) or {}
     task_data = data.get("proposed_task") or data
 
     if hasattr(task_data, "to_dict"):
@@ -236,12 +208,7 @@ def apply_proposed_schedule():
     if user_id is None:
         return _json_error("Unauthorized access.", "AUTH_REQUIRED", 401)
 
-    data = (
-        request.get_json(silent=True)
-        if request.is_json
-        else request.form
-    ) or {}
-
+    data = request.get_json(silent=True) or {}
     schedule = data.get("proposed_schedule") or data.get("blocks") or []
 
     valid, sanitized, error = validate_schedule(schedule)
@@ -449,17 +416,16 @@ def query_terra_ai(user_query, task_context):
             "proposed_task": None,
         }
 
+
 def build_user_context(user_id):
     conn = get_db()
     now = datetime.now(timezone.utc)
-    today = now.date().isoformat()
-    week_start = (now - timedelta(days=6)).strftime("%Y-%m-%d 00:00:00")
 
     tasks = [
         dict(row)
         for row in conn.execute(
             """SELECT id, title, subject, priority, due_date, due_time,
-                      estimated_minutes, completed, completed_at
+                      estimated_minutes, completed
                  FROM planner_tasks
                 WHERE user_id = ? AND is_deleted = 0
                 ORDER BY completed ASC,
@@ -471,68 +437,15 @@ def build_user_context(user_id):
         ).fetchall()
     ]
 
-    task_counts = conn.execute(
-        """SELECT
-               COUNT(*) AS total,
-               SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) AS completed,
-               SUM(
-                   CASE
-                       WHEN completed = 0
-                        AND due_date IS NOT NULL
-                        AND due_date < ?
-                       THEN 1 ELSE 0
-                   END
-               ) AS overdue,
-               COALESCE(
-                   SUM(
-                       CASE WHEN completed = 0
-                            THEN estimated_minutes ELSE 0 END
-                   ), 0
-               ) AS active_minutes
-             FROM planner_tasks
-            WHERE user_id = ? AND is_deleted = 0""",
-        (today, user_id),
-    ).fetchone()
-
     events = [
         dict(row)
         for row in conn.execute(
-            """SELECT id, title, category, start_time, end_time,
-                      is_all_day, source
+            """SELECT id, title, category, start_time, end_time, is_all_day
                  FROM events
                 WHERE user_id = ? AND is_deleted = 0 AND end_time >= ?
                 ORDER BY start_time ASC
                 LIMIT 15""",
             (user_id, now.strftime("%Y-%m-%d %H:%M:%S")),
-        ).fetchall()
-    ]
-
-    focus = conn.execute(
-        """SELECT COUNT(*) AS sessions,
-                  COALESCE(SUM(duration_minutes), 0) AS minutes,
-                  COALESCE(
-                      SUM(
-                          CASE WHEN completed_at >= ?
-                               THEN duration_minutes ELSE 0 END
-                      ), 0
-                  ) AS week_minutes
-             FROM focus_sessions
-            WHERE user_id = ? AND status = 'completed'""",
-        (week_start, user_id),
-    ).fetchone()
-
-    recent_focus = [
-        dict(row)
-        for row in conn.execute(
-            """SELECT fs.duration_minutes, fs.completed_at, fs.mode,
-                      COALESCE(pt.title, 'General Focus') AS task
-                 FROM focus_sessions fs
-                 LEFT JOIN planner_tasks pt
-                   ON pt.id = fs.task_id AND pt.user_id = fs.user_id
-                WHERE fs.user_id = ? AND fs.status = 'completed'
-                ORDER BY fs.completed_at DESC
-                LIMIT 5""",
-            (user_id,),
         ).fetchall()
     ]
 
@@ -542,35 +455,9 @@ def build_user_context(user_id):
         (user_id,),
     ).fetchone()
 
-    total_tasks = task_counts["total"] or 0
-    completed_tasks = task_counts["completed"] or 0
-    active_minutes = task_counts["active_minutes"] or 0
-    total_focus_minutes = focus["minutes"] or 0
-
     context = {
-        "planner_summary": {
-            "total_tasks": total_tasks,
-            "completed_tasks": completed_tasks,
-            "overdue_tasks": task_counts["overdue"] or 0,
-            "active_estimated_minutes": active_minutes,
-            "shown_tasks": tasks,
-        },
-        "calendar_upcoming": events,
-        "focus_summary": {
-            "completed_sessions": focus["sessions"] or 0,
-            "total_minutes": total_focus_minutes,
-            "last_7_days_minutes": focus["week_minutes"] or 0,
-            "recent_sessions": recent_focus,
-        },
-        "analytics_summary": {
-            "completion_rate": round(
-                (completed_tasks / total_tasks) * 100, 1
-            ) if total_tasks else 0.0,
-            "planned_vs_actual_minutes": {
-                "planned_active": active_minutes,
-                "actual_focus": total_focus_minutes,
-            },
-        },
+        "tasks": tasks,
+        "upcoming_events": events,
         "preferences": dict(user) if user else {},
     }
 
@@ -638,37 +525,10 @@ def validate_scope(query):
     if any(trigger in query_lower for trigger in EXTRACTION_TRIGGERS):
         return False, "I cannot display system configuration instructions."
 
-    if any(
-        action in query_lower
-        for action in (
-            "write an essay",
-            "solve this problem",
-            "do my homework",
-            "write code for",
-        )
-    ):
-        return False, (
-            "Terra helps you organize and break down assignments, "
-            "but cannot write or solve schoolwork for you."
-        )
-
     if len(query) > 500:
         return False, (
             "Your request is too long. Please shorten it to focus "
             "on your schedule or tasks."
-        )
-
-    if any(re.search(pattern, query_lower) for pattern in BLOCKED_PATTERNS):
-        return False, (
-            "Terra is focused on planning, organizing, and study management."
-        )
-
-    if (
-        not any(keyword in query_lower for keyword in ALLOWED_KEYWORDS)
-        and len(query_lower.split()) > 10
-    ):
-        return False, (
-            "This query appears outside the scope of Smart Planner."
         )
 
     return True, None
