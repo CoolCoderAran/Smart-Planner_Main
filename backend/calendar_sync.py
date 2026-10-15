@@ -935,6 +935,21 @@ def google_callback(user_id):
             400,
         )
 
+    conn = db.get_db()
+
+    user = conn.execute(
+        "SELECT id FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+
+    if user is None:
+        session.clear()
+        current_app.logger.error(
+            "Google OAuth failed: user_id=%r is missing from users table",
+            user_id,
+        )
+        return redirect(url_for("login"))
+
     try:
         response = requests.post(
             GOOGLE_TOKEN_ENDPOINT,
@@ -982,20 +997,6 @@ def google_callback(user_id):
                 gcal_error="missing_access_token",
             )
         )
-
-    conn = db.get_db()
-
-    user = conn.execute(
-        "SELECT id FROM users WHERE id = ?",
-        (user_id,),
-    ).fetchone()
-
-    if user is None:
-        current_app.logger.error(
-            "Google OAuth failed: user_id=%r is missing from users table",
-            user_id,
-        )
-        return redirect(url_for("calendar.calendar_view", gcal_error="user_not_found"))
 
     _save_google_tokens(
         conn,
@@ -1102,6 +1103,11 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
     Syncs Google Calendar events into Planner.
     Guarantees every synced event maps strictly to an independent top-level task (never a subtask).
     """
+    # Verify user exists in database to maintain integrity
+    user_check = cursor.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user_check:
+        return
+
     for g_event in google_events:
         google_event_id = g_event.get("id")
         if not google_event_id or g_event.get("status") == "cancelled":
@@ -1136,11 +1142,11 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
             event_id, planner_task_id = existing_event["id"], existing_event["planner_task_id"]
 
             if not planner_task_id:
-                # Insert as a standalone top-level task
+                # Explicitly specify parent_id as NULL to mandate a standalone top-level task
                 cursor.execute("""
                     INSERT INTO planner_tasks 
-                        (user_id, title, notes, due_date, due_time, subject, priority, completed)
-                    VALUES (?, ?, ?, ?, ?, 'Google Calendar', 2, 0)
+                        (user_id, parent_id, title, notes, due_date, due_time, subject, priority, completed, is_deleted)
+                    VALUES (?, NULL, ?, ?, ?, ?, 'Google Calendar', 2, 0, 0)
                 """, (user_id, title, description, start_date_str, start_time_str))
                 
                 new_task_id = cursor.lastrowid
@@ -1149,19 +1155,19 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
                     UPDATE events SET planner_task_id = ? WHERE id = ?
                 """, (new_task_id, event_id))
             else:
-                # Keep top-level task updated
+                # Ensure existing task remains top-level (parent_id = NULL)
                 cursor.execute("""
                     UPDATE planner_tasks 
-                    SET title = ?, notes = ?, due_date = ?, due_time = ?
+                    SET title = ?, notes = ?, due_date = ?, due_time = ?, parent_id = NULL
                     WHERE id = ? AND user_id = ?
                 """, (title, description, start_date_str, start_time_str, planner_task_id, user_id))
 
         else:
-            # Insert as an independent top-level task
+            # Explicitly set parent_id to NULL on new event insertion
             cursor.execute("""
                 INSERT INTO planner_tasks 
-                    (user_id, title, notes, due_date, due_time, subject, priority, completed)
-                VALUES (?, ?, ?, ?, ?, 'Google Calendar', 2, 0)
+                    (user_id, parent_id, title, notes, due_date, due_time, subject, priority, completed, is_deleted)
+                VALUES (?, NULL, ?, ?, ?, ?, 'Google Calendar', 2, 0, 0)
             """, (user_id, title, description, start_date_str, start_time_str))
             
             new_task_id = cursor.lastrowid
