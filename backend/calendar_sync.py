@@ -1442,13 +1442,30 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
     """
     for g_event in google_events:
         google_event_id = g_event.get("id")
-        title = g_event.get("summary", "Untitled Google Event")
-        description = g_event.get("description", "")
+        if not google_event_id:
+            continue
+
+        title = g_event.get("summary") or "Untitled Google Event"
+        description = g_event.get("description") or ""
         
-        # Parse start date & time from Google event payload
+        # Safely extract start date and time
         start = g_event.get("start", {})
-        start_date_str = start.get("date") or start.get("dateTime", "")[:10]
-        start_time_str = start.get("dateTime", "")[11:16] if "T" in start.get("dateTime", "") else None
+        start_raw = start.get("dateTime") or start.get("date") or ""
+
+        start_date_str = None
+        start_time_str = None
+
+        if "T" in start_raw:
+            # Format: 2026-10-15T14:30:00Z or offset
+            try:
+                dt = datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+                start_date_str = dt.strftime("%Y-%m-%d")
+                start_time_str = dt.strftime("%H:%M")
+            except ValueError:
+                start_date_str = start_raw[:10]
+        else:
+            # All-day event format: YYYY-MM-DD
+            start_date_str = start_raw[:10] if len(start_raw) >= 10 else None
 
         # 1. Check if event already exists in SQLite DB
         cursor.execute("""
@@ -1495,7 +1512,7 @@ def sync_google_events_to_planner(cursor, user_id, google_events):
                 new_task_id, 
                 title, 
                 description, 
-                g_event.get("start", {}).get("dateTime", start_date_str),
-                g_event.get("end", {}).get("dateTime", start_date_str),
+                g_event.get("start", {}).get("dateTime") or g_event.get("start", {}).get("date", ""),
+                g_event.get("end", {}).get("dateTime") or g_event.get("end", {}).get("date", ""),
                 google_event_id
             ))
