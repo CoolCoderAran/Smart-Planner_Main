@@ -595,3 +595,88 @@
         max-width: 1280px;
     }
 }
+
+/* ==========================================================================
+   PLANNER RESPONSIVE BREAKPOINTS & TOUCH FIXES
+   ========================================================================== */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 12px 8px;
+        overflow-x: hidden;
+    }
+
+    .planner-header {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .toolbar-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .search-bar input {
+        padding: 10px 12px;
+        font-size: 0.88rem;
+    }
+
+    .filter-bar {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-btn {
+        flex: 0 0 auto;
+        padding: 6px 12px;
+        font-size: 0.82rem;
+    }
+
+    .task-card {
+        padding: 12px;
+    }
+
+    .task-main {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .task-left-content {
+        gap: 8px;
+    }
+
+    .task-actions {
+        width: 100%;
+        justify-content: flex-end;
+        border-top: 1px solid var(--card-border);
+        padding-top: 8px;
+    }
+
+    .task-actions .glass-btn {
+        min-height: 38px;
+        padding: 6px 12px;
+    }
+
+    /* Touch Modals */
+    .modal-content {
+        width: 95%;
+        max-width: 100%;
+        padding: 16px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .batch-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+}
