@@ -3,10 +3,12 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 24px;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 header { margin-bottom: 24px; }
-header h1 { margin: 0; font-size: 2rem; color: var(--text-title); }
+header h1 { margin: 0; font-size: 2rem; color: var(--text-title); word-break: break-word; }
 header p { color: var(--text-muted); margin-top: 4px; }
 
 .metrics-grid {
@@ -26,6 +28,7 @@ header p { color: var(--text-muted); margin-top: 4px; }
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--accent);
+    word-break: break-word;
 }
 
 .text-alert { color: var(--alert-color); }
@@ -37,8 +40,31 @@ header p { color: var(--text-muted); margin-top: 4px; }
     margin-bottom: 24px;
 }
 
-.chart-card { min-height: 300px; }
+.chart-card { 
+    min-height: 300px; 
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden; /* Prevents chart overdraw */
+}
+
 .chart-card h3 { margin-top: 0; margin-bottom: 16px; color: var(--text-title); }
+
+/* Strict Responsive Rules for Chart Containers & Canvas Elements */
+.chart-card canvas,
+.chart-card svg,
+.chart-card > div:not(.chart-card h3) {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 100% !important;
+    box-sizing: border-box;
+    object-fit: contain;
+    flex: 1;
+}
 
 .achievements-grid {
     display: grid;
@@ -56,32 +82,32 @@ header p { color: var(--text-muted); margin-top: 4px; }
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
 .achievement-card.locked {     
     background: var(--card-bg-hover);     
     border: 1px dashed var(--card-border);     
     opacity: 0.6; 
-}  
+}   
 
 .achievement-card.locked:hover {     
     opacity: 0.85;     
     border-color: var(--card-border-light); 
-}  
+}   
 
 .achievement-card.locked .achievement-title {     
     color: var(--text-muted); 
-}  
+}   
 
 .achievement-card.locked .achievement-desc {     
     color: var(--text-sub, var(--text-muted)); 
-}  
+}   
 
 .achievement-card.locked .achievement-icon {     
     filter: grayscale(1);     
     opacity: 0.5; 
 }
-
 
 .achievement-card.unlocked {
     opacity: 1;
@@ -93,18 +119,25 @@ header p { color: var(--text-muted); margin-top: 4px; }
 
 .achievement-icon {
     font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.achievement-info {
+    min-width: 0; /* Ensures inner text wraps properly inside flex container */
 }
 
 .achievement-info h4 {
     margin: 0 0 0.25rem 0;
     font-size: 1rem;
     color: var(--text-title, #ffffff);
+    word-break: break-word;
 }
 
 .achievement-info p {
     margin: 0;
     font-size: 0.82rem;
     color: var(--text-muted, #9ca3af);
+    word-break: break-word;
 }
 
 .achievement-info small {
@@ -116,3 +149,80 @@ header p { color: var(--text-muted); margin-top: 4px; }
 
 .earned-date { color: #34d399; }
 .locked-text { color: #6b7280; }
+
+/* ==========================================================================
+   RESPONSIVE MEDIA QUERIES FOR POPULAR SCREEN SIZES
+   ========================================================================== */
+
+/* Tablets & Small Laptops (Max Width: 992px) */
+@media screen and (max-width: 992px) {
+    .glass-container {
+        padding: 20px;
+    }
+
+    .charts-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+    }
+}
+
+/* Tablets & Mobile Devices (Max Width: 768px) */
+@media screen and (max-width: 768px) {
+    .glass-container {
+        padding: 16px;
+    }
+
+    header h1 {
+        font-size: 1.6rem;
+    }
+
+    .metrics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card {
+        min-height: 260px;
+    }
+
+    .achievements-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile Screens (Max Width: 480px) */
+@media screen and (max-width: 480px) {
+    .glass-container {
+        padding: 12px;
+    }
+
+    header h1 {
+        font-size: 1.35rem;
+    }
+
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card {
+        min-height: 220px;
+        padding: 12px;
+    }
+
+    .achievement-card {
+        padding: 0.85rem;
+        gap: 0.75rem;
+    }
+
+    .achievement-icon {
+        font-size: 1.6rem;
+    }
+}
