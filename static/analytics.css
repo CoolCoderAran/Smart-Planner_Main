@@ -226,3 +226,40 @@ header p { color: var(--text-muted); margin-top: 4px; }
         font-size: 1.6rem;
     }
 }
+/* ==========================================================================
+   ANALYTICS RESPONSIVE SCALING
+   ========================================================================== */
+@media (max-width: 768px) {
+    .glass-container {
+        padding: 12px 8px;
+    }
+
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-value {
+        font-size: 1.3rem;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .chart-card {
+        min-height: 250px;
+        height: 280px;
+    }
+
+    .achievements-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 380px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
