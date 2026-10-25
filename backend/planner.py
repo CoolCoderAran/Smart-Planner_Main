@@ -243,11 +243,13 @@ def toggle_task(user_id, task_id):
     conn.commit()
     achievements.check_achievements(user_id)
 
-    # Return JSON for AJAX calls; redirect back to referrer for standard HTML form posts
+    # Return JSON payload for background AJAX requests
     if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"success": True, "task": _task_response(conn, task_id, user_id)})
-    
-    return redirect(request.referrer or url_for("dashboard"))
+
+    # Fallback redirect for standard HTML form posts on the dashboard
+    fallback_target = request.referrer or url_for("dashboard")
+    return redirect(fallback_target)
 
 
 @planner_bp.route("/delete/<int:task_id>", methods=["POST", "DELETE"])
