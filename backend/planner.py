@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import re
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, redirect
 
 import achievements
 from auth import require_auth, require_owned_row
@@ -243,14 +243,12 @@ def toggle_task(user_id, task_id):
     conn.commit()
     achievements.check_achievements(user_id)
 
-    # Return JSON payload for background AJAX requests
+    # Return JSON for AJAX requests
     if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"success": True, "task": _task_response(conn, task_id, user_id)})
 
-    # Fallback redirect for standard HTML form posts on the dashboard
-    fallback_target = request.referrer or url_for("dashboard")
-    return redirect(fallback_target)
-
+    # Redirect to referrer page or explicit dashboard route for standard HTML form posts
+    return redirect(request.referrer or "/dashboard")
 
 @planner_bp.route("/delete/<int:task_id>", methods=["POST", "DELETE"])
 @require_auth
