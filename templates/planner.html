@@ -49,63 +49,64 @@
         <p class="date-display">Today: <span id="current-date"></span></p>
 
         {% macro render_task_node(task, category, overdue=false) %}
-        <div class="task-card priority-{{ task.priority }}{% if overdue %} overdue-card{% endif %}{% if task.completed %} completed{% endif %}"
-             data-task-id="{{ task.id }}"
-             data-priority="{{ task.priority }}"
-             data-due="{{ task.due_date or '' }}"
-             data-completed="{{ 'true' if task.completed else 'false' }}"
-             data-category="{{ category }}">
+<div class="task-card priority-{{ task.priority }}{% if overdue %} overdue-card{% endif %}{% if task.completed %} completed{% endif %}"
+     data-task-id="{{ task.id }}"
+     data-priority="{{ task.priority }}"
+     data-due="{{ task.due_date or '' }}"
+     data-completed="{{ 'true' if task.completed else 'false' }}"
+     data-category="{{ category }}">
+    
+    <div class="task-main">
+        <div class="task-left-content">
+            <input type="checkbox" class="task-select-cb" value="{{ task.id }}"
+                   onchange="toggleTaskSelection({{ task.id }}, this)"
+                   aria-label="Select {{ task.title }}">
             
-            <div class="task-main">
-                <div class="task-left-content">
-                    <input type="checkbox" class="task-select-cb" value="{{ task.id }}"
-                           onchange="toggleTaskSelection({{ task.id }}, this)"
-                           aria-label="Select {{ task.title }}">
-                    
-                    <button class="task-toggle-btn" onclick="toggleTask({{ task.id }})" aria-label="Toggle task status">
-                        ✓
-                    </button>
+            <button class="task-toggle-btn" onclick="toggleTask({{ task.id }})" aria-label="Toggle task status">
+                ✓
+            </button>
 
-                    <div class="task-info">
-                        <div class="task-title">{{ task.title }}</div>
-                        <div class="task-meta">
-                            {% if task.subject %}<span class="badge-pill task-subject-badge">{{ task.subject }}</span>{% endif %}
-                            <span class="badge-pill">⏱ {{ task.estimated_minutes }}m</span>
-                            <span class="badge-pill {% if overdue %}overdue-text{% endif %}">
-                                📅 {% if task.completed %}Completed{% else %}{{ task.due_date or 'No date' }}{% if task.due_time %} {{ task.due_time }}{% endif %}{% endif %}
-                            </span>
-                            {% if task.subtasks %}
-                            <span class="badge-pill">🌿 {{ task.subtasks|length }} subtask{% if task.subtasks|length > 1 %}s{% endif %}</span>
-                            {% endif %}
-                        </div>
-                    </div>
+            <div class="task-info">
+                <div class="task-title">{{ task.title }}</div>
+                <div class="task-meta">
+                    {% if task.subject %}<span class="badge-pill task-subject-badge">{{ task.subject }}</span>{% endif %}
+                    <span class="badge-pill">⏱ {{ task.estimated_minutes }}m</span>
+                    <span class="badge-pill {% if overdue %}overdue-text{% endif %}">
+                        📅 {% if task.completed %}Completed{% else %}{{ task.due_date or 'No date' }}{% if task.due_time %} {{ task.due_time }}{% endif %}{% endif %}
+                    </span>
+                    {% if task.subtasks %}
+                    <span class="badge-pill">🌿 {{ task.subtasks|length }} subtask{% if task.subtasks|length > 1 %}s{% endif %}</span>
+                    {% endif %}
                 </div>
-
-                <div class="task-actions">
-    <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
-    <button type="button" class="glass-btn" 
-            onclick='editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or "") | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or "") | tojson }}, {{ (task.due_time or "") | tojson }}, {{ (task.notes or "") | tojson }})'>
-        Edit
-    </button>
-    <button type="button" class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
-</div>
-
-            <!-- Inline Subtask Input Form -->
-            <div id="inlineSubtaskForm-{{ task.id }}" class="inline-subtask-form">
-                <input type="text" id="inlineSubtaskInput-{{ task.id }}" class="glass-input inline-subtask-input" placeholder="Enter subtask title..." onkeydown="handleInlineSubtaskKey(event, {{ task.id }})">
-                <button class="glass-btn primary" onclick="submitInlineSubtask({{ task.id }})">Add</button>
             </div>
-
-            <!-- Subtask Tree Render -->
-            {% if task.subtasks %}
-            <div class="subtask-tree">
-                {% for subtask in task.subtasks %}
-                    {{ render_task_node(subtask, category, overdue) }}
-                {% endfor %}
-            </div>
-            {% endif %}
         </div>
-        {% endmacro %}
+
+        <div class="task-actions">
+            <button type="button" class="glass-btn" onclick="toggleInlineSubtaskForm({{ task.id }})">+ Subtask</button>
+            <button type="button" class="glass-btn" 
+                    onclick='editTask({{ task.id }}, {{ task.title | tojson }}, {{ (task.subject or "") | tojson }}, {{ task.estimated_minutes or 30 }}, {{ task.priority or 2 }}, {{ (task.due_date or "") | tojson }}, {{ (task.due_time or "") | tojson }}, {{ (task.notes or "") | tojson }})'>
+                Edit
+            </button>
+            <button type="button" class="glass-btn danger" onclick="deleteTask({{ task.id }})">🗑</button>
+        </div>
+    </div> <!-- Close .task-main HERE -->
+
+    <!-- Inline Subtask Input Form -->
+    <div id="inlineSubtaskForm-{{ task.id }}" class="inline-subtask-form">
+        <input type="text" id="inlineSubtaskInput-{{ task.id }}" class="glass-input inline-subtask-input" placeholder="Enter subtask title..." onkeydown="handleInlineSubtaskKey(event, {{ task.id }})">
+        <button class="glass-btn primary" onclick="submitInlineSubtask({{ task.id }})">Add</button>
+    </div>
+
+    <!-- Subtask Tree Render -->
+    {% if task.subtasks %}
+    <div class="subtask-tree">
+        {% for subtask in task.subtasks %}
+            {{ render_task_node(subtask, category, overdue) }}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
 
         <section class="task-section" data-section="today">
             <h2>Today</h2>
