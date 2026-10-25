@@ -242,7 +242,12 @@ def toggle_task(user_id, task_id):
     
     conn.commit()
     achievements.check_achievements(user_id)
-    return jsonify({"success": True, "task": _task_response(conn, task_id, user_id)})
+
+    # Return JSON for AJAX calls; redirect back to referrer for standard HTML form posts
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "task": _task_response(conn, task_id, user_id)})
+    
+    return redirect(request.referrer or url_for("dashboard"))
 
 
 @planner_bp.route("/delete/<int:task_id>", methods=["POST", "DELETE"])
