@@ -280,53 +280,41 @@ def _validate_ai_payload(payload):
     if not isinstance(payload, dict):
         raise ValueError("AI response must be a JSON object")
 
-    allowed = {
-        "message",
-        "suggested_actions",
-        "proposed_schedule",
-        "proposed_task",
-    }
-    if set(payload) - allowed:
-        raise ValueError("AI response contained unexpected fields")
-
-    message = str(payload.get("message", "")).strip()[
-        :MAX_AI_MESSAGE_LENGTH
-    ]
+    message = str(payload.get("message", "")).strip()[:MAX_AI_MESSAGE_LENGTH]
 
     actions = payload.get("suggested_actions") or []
-    if not isinstance(actions, list) or len(actions) > MAX_SUGGESTED_ACTIONS:
-        raise ValueError("Invalid suggested_actions")
-
+    if not isinstance(actions, list):
+        actions = []
+    
     actions = [
         str(action).strip()[:MAX_ACTION_LENGTH]
-        for action in actions
+        for action in actions[:MAX_SUGGESTED_ACTIONS]
     ]
 
     schedule = payload.get("proposed_schedule")
     valid, schedule, error = validate_schedule(schedule)
     if not valid:
-        raise ValueError(error)
+        schedule = None
 
     proposed_task = payload.get("proposed_task")
     if proposed_task is not None:
         if not isinstance(proposed_task, dict):
-            raise ValueError("Invalid proposed_task")
-
-        allowed_task_fields = {
-            "title",
-            "subject",
-            "due_date",
-            "due_time",
-            "estimated_minutes",
-            "priority",
-        }
-        if set(proposed_task) - allowed_task_fields:
-            raise ValueError(
-                "AI proposed task contained unexpected fields"
-            )
-
-        if len(str(proposed_task.get("title", "")).strip()) > 255:
-            raise ValueError("AI proposed task title is too long")
+            proposed_task = None
+        else:
+            allowed_task_fields = {
+                "title",
+                "subject",
+                "due_date",
+                "due_time",
+                "estimated_minutes",
+                "priority",
+            }
+            # Filter down to allowed task fields only
+            proposed_task = {
+                k: v for k, v in proposed_task.items() if k in allowed_task_fields
+            }
+            if len(str(proposed_task.get("title", "")).strip()) > 255:
+                proposed_task["title"] = str(proposed_task.get("title", "")).strip()[:255]
 
     return {
         "message": message,
@@ -389,7 +377,7 @@ def query_terra_ai(user_query, task_context):
         )
 
         response = client.chat.completions.create(
-            model="gpt-6-luna",
+            model="gpt-4o-mini",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_instructions},
@@ -417,60 +405,13 @@ def query_terra_ai(user_query, task_context):
         }
 
 
-def build_user_context(user_id):
-    conn = get_db()
-    now = datetime.now(timezone.utc)
-
-    tasks = [
-        dict(row)
-        for row in conn.execute(
-            """SELECT id, title, subject, priority, due_date, due_time,
-                      estimated_minutes, completed
-                 FROM planner_tasks
-                WHERE user_id = ? AND is_deleted = 0
-                ORDER BY completed ASC,
-                         COALESCE(due_date, '9999-12-31') ASC,
-                         priority ASC,
-                         id ASC
-                LIMIT ?""",
-            (user_id, MAX_CONTEXT_TASKS),
-        ).fetchall()
-    ]
-
-    events = [
-        dict(row)
-        for row in conn.execute(
-            """SELECT id, title, category, start_time, end_time, is_all_day
-                 FROM events
-                WHERE user_id = ? AND is_deleted = 0 AND end_time >= ?
-                ORDER BY start_time ASC
-                LIMIT 15""",
-            (user_id, now.strftime("%Y-%m-%d %H:%M:%S")),
-        ).fetchall()
-    ]
-
-    user = conn.execute(
-        """SELECT default_focus_mins, break_mins, ai_tone, timezone
-             FROM users WHERE id = ?""",
-        (user_id,),
-    ).fetchone()
-
-    context = {
-        "tasks": tasks,
-        "upcoming_events": events,
-        "preferences": dict(user) if user else {},
-    }
-
-    return json.dumps(context, default=str)
-
-
 def check_rate_limit(user_id):
     if not isinstance(user_id, int):
         return False, "Authenticated user was not found."
 
     conn = get_db()
     now = datetime.now(timezone.utc)
-    day_start = now.strftime("%Y-%m-%d 00:00:00")
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
 
     daily = conn.execute(
         """SELECT COUNT(*) AS n
