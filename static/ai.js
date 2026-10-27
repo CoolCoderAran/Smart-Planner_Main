@@ -3,14 +3,15 @@
 // Handles UI state, proposals, AJAX & user-scoped localStorage persistence
 // ==========================================
 
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || "";
+}
 
 /**
  * Dynamically resolves a unique storage key per user so chat history
  * is never shared across different user accounts on the same browser.
  */
 function getStorageKey() {
-    // Read username from navbar or body data attribute if available
     const usernameEl = document.querySelector('.account-username') || document.querySelector('.username');
     const username = usernameEl ? usernameEl.textContent.trim().toLowerCase() : "default";
     return `terra_chat_history_${username}`;
@@ -27,7 +28,7 @@ function postJson(url, payload) {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-CSRF-Token": csrfToken,
+            "X-CSRF-Token": getCsrfToken(),
             "X-Requested-With": "XMLHttpRequest"
         },
         body: JSON.stringify(payload)
@@ -93,14 +94,26 @@ function clearChatHistory() {
                     <div class="msg-bubble">
                         <p>Hello! I'm <strong>Terra</strong>, your AI scheduling assistant.</p>
                         <p>What are we planning today?</p>
-                        <div class="suggestion-chips">
-                            <button type="button" class="chip" onclick="usePrompt('Help me plan my study schedule for final exams next week.')">📚 Plan exam schedule</button>
-                            <button type="button" class="chip" onclick="usePrompt('Break down my term paper into subtasks with deadlines.')">📝 Break down assignment</button>
-                            <button type="button" class="chip" onclick="usePrompt('Organize my tasks for today by priority.')">⚡ Optimize today's schedule</button>
-                        </div>
+                        <div class="suggestion-chips" id="defaultChips"></div>
                     </div>
                 </div>
             `;
+            
+            const chipsContainer = chatContainer.querySelector("#defaultChips");
+            const defaultPrompts = [
+                { label: "📚 Plan exam schedule", query: "Help me plan my study schedule for final exams next week." },
+                { label: "📝 Break down assignment", query: "Break down my term paper into subtasks with deadlines." },
+                { label: "⚡ Optimize today's schedule", query: "Organize my tasks for today by priority." }
+            ];
+
+            defaultPrompts.forEach(p => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "chip";
+                btn.textContent = p.label;
+                btn.addEventListener("click", () => usePrompt(p.query));
+                chipsContainer.appendChild(btn);
+            });
         }
         renderProposals({});
         if (window.lucide) lucide.createIcons();
@@ -117,7 +130,8 @@ function restoreChatHistoryUI() {
     const chatContainer = document.getElementById("chatMessages");
     if (!chatContainer) return;
 
-    chatContainer.innerHTML = "";
+    // Clear existing server placeholder bubbles before restoring
+    chatContainer.replaceChildren();
 
     history.forEach(item => {
         if (item.sender === "user") {
@@ -163,23 +177,36 @@ function appendTerraBubbleUI(data, saveToStorage = true) {
     const msgDiv = document.createElement("div");
     msgDiv.className = "message terra-message";
 
-    let chipsHtml = "";
+    const avatar = document.createElement("div");
+    avatar.className = "msg-avatar";
+    avatar.innerHTML = `<i data-lucide="sparkles"></i>`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+
+    const p = document.createElement("p");
+    p.textContent = data.message || "";
+    bubble.appendChild(p);
+
     if (Array.isArray(data.suggested_actions) && data.suggested_actions.length > 0) {
-        chipsHtml = `<div class="suggestion-chips">` + 
-            data.suggested_actions.map(act => {
-                const label = typeof act === 'object' ? (act.label || act.action || 'Action') : act;
-                return `<button type="button" class="chip" onclick="usePrompt('${escapeHtml(label)}')">${escapeHtml(label)}</button>`;
-            }).join('') + 
-        `</div>`;
+        const chipsDiv = document.createElement("div");
+        chipsDiv.className = "suggestion-chips";
+
+        data.suggested_actions.forEach(act => {
+            const label = typeof act === "object" ? (act.label || act.action || "Action") : act;
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "chip";
+            btn.textContent = label;
+            btn.addEventListener("click", () => usePrompt(label));
+            chipsDiv.appendChild(btn);
+        });
+
+        bubble.appendChild(chipsDiv);
     }
 
-    msgDiv.innerHTML = `
-        <div class="msg-avatar"><i data-lucide="sparkles"></i></div>
-        <div class="msg-bubble">
-            <p>${escapeHtml(data.message)}</p>
-            ${chipsHtml}
-        </div>
-    `;
+    msgDiv.appendChild(avatar);
+    msgDiv.appendChild(bubble);
 
     chatContainer.appendChild(msgDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
