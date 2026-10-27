@@ -377,7 +377,7 @@ def query_terra_ai(user_query, task_context):
         )
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-6-luna",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_instructions},
